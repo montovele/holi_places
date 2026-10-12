@@ -1,0 +1,7 @@
+node_modules/
+dist/
+holi_backend/data/*.sqlite
+holi_backend/data/*.sqlite-*
+.env
+.env.*
+npm-debug.log*
