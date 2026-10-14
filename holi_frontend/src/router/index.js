@@ -11,6 +11,8 @@ import TeamView from '../views/TeamView.vue'
 import RegistrationView from '../views/RegistrationView.vue'
 import BillingView from '../views/BillingView.vue'
 import PlansView from '../views/PlansView.vue'
+import AdsView from '../views/AdsView.vue'
+import MyAdsView from '../views/MyAdsView.vue'
 import modules from '../modules/registry'
 import { useAuthStore } from '../stores/auth'
 
@@ -95,6 +97,18 @@ const router = createRouter({
           name: 'appearance',
           component: () => import('../views/AppearanceView.vue'),
           meta: { title: 'Identidad visual', subtitle: 'Marca global y comunidad', roles: ['superadmin'] },
+        },
+        {
+          path: '/admin/ads',
+          name: 'ads',
+          component: AdsView,
+          meta: { title: 'Publicidad', subtitle: 'Campañas públicas', roles: ['superadmin'] },
+        },
+        {
+          path: '/my-ads',
+          name: 'my-ads',
+          component: MyAdsView,
+          meta: { title: 'Publicidad', subtitle: 'Campañas de mi congregación', roles: ['admin', 'superadmin'] },
         },
         ...modules.map((module) => ({
           path: `/${module.path}`,

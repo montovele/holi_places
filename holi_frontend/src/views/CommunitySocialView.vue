@@ -3,11 +3,14 @@ import { computed, onMounted, ref } from 'vue'
 import { ArrowRightIcon, BookOpenIcon, BuildingLibraryIcon, CalendarDaysIcon, GlobeAltIcon, HeartIcon, MapPinIcon, NewspaperIcon, SparklesIcon, UsersIcon } from '@heroicons/vue/24/outline'
 import { getPublicCommunity } from '../services/communityService'
 import { useAppearanceStore } from '../stores/appearance'
+import { usePublicAdRotation } from '../composables/usePublicAdRotation'
+import ScrollAdSlot from '../components/community/ScrollAdSlot.vue'
 
 const appearance = useAppearanceStore()
 const loading = ref(true)
 const errorMessage = ref('')
-const community = ref({ congregations: [], events: [], posts: [], moduleUpdates: [] })
+const community = ref({ congregations: [], events: [], posts: [], moduleUpdates: [], ads: [] })
+const { ads: liveAds } = usePublicAdRotation()
 const selectedCongregation = ref('all')
 const selectedArea = ref('all')
 const brandIcons = { church: BuildingLibraryIcon, book: BookOpenIcon, heart: HeartIcon, community: GlobeAltIcon, light: SparklesIcon }
@@ -296,6 +299,8 @@ onMounted(loadCommunity)
         </div>
       </section>
 
+      <ScrollAdSlot :ads="liveAds" placement="community" :slot-index="0" :slot-count="3" :slot-seed="6" />
+
       <section id="tablero" class="content-section">
         <div class="section-header">
           <div>
@@ -350,6 +355,10 @@ onMounted(loadCommunity)
         <div v-else class="neutral-state">No hay congregaciones disponibles para mostrar.</div>
       </section>
 
+      <ScrollAdSlot :ads="liveAds" placement="community" :slot-index="1" :slot-count="3" :slot-seed="7" />
+
+      <ScrollAdSlot :ads="liveAds" placement="content" :slot-index="0" :slot-count="3" :slot-seed="10" />
+
       <section id="agenda" class="content-section">
         <div class="section-header">
           <div>
@@ -379,6 +388,10 @@ onMounted(loadCommunity)
         <div v-else class="neutral-state">Todavía no hay encuentros públicos.</div>
       </section>
 
+      <ScrollAdSlot :ads="liveAds" placement="community" :slot-index="2" :slot-count="3" :slot-seed="8" />
+
+      <ScrollAdSlot :ads="liveAds" placement="content" :slot-index="1" :slot-count="3" :slot-seed="11" />
+
       <section class="content-section stories-section">
         <div class="section-header">
           <div>
@@ -402,6 +415,8 @@ onMounted(loadCommunity)
         </div>
         <div v-else class="neutral-state">Aún no hay publicaciones para mostrar.</div>
       </section>
+
+      <ScrollAdSlot :ads="liveAds" placement="content" :slot-index="2" :slot-count="3" :slot-seed="12" />
     </main>
   </div>
 </template>

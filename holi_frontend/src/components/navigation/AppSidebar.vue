@@ -14,6 +14,7 @@ import {
   HeartIcon,
   HomeIcon,
   MapPinIcon,
+  MegaphoneIcon,
   LockClosedIcon,
   UserGroupIcon,
   UsersIcon,
@@ -69,6 +70,14 @@ const icons = {
       <RouterLink v-if="auth.user?.role === 'superadmin'" class="nav-link" :to="{ name: 'appearance' }" active-class="nav-link-active" @click="$emit('close')">
         <Cog6ToothIcon class="nav-icon" aria-hidden="true" />
         <span>Marca y comunidad</span>
+      </RouterLink>
+      <RouterLink v-if="auth.user?.role === 'superadmin'" class="nav-link" :to="{ name: 'ads' }" active-class="nav-link-active" @click="$emit('close')">
+        <MegaphoneIcon class="nav-icon" aria-hidden="true" />
+        <span>Publicidad</span>
+      </RouterLink>
+      <RouterLink v-if="['admin', 'superadmin'].includes(auth.user?.role)" class="nav-link" :to="{ name: 'my-ads' }" active-class="nav-link-active" @click="$emit('close')">
+        <MegaphoneIcon class="nav-icon" aria-hidden="true" />
+        <span>Mis anuncios</span>
       </RouterLink>
       <template v-if="modulesEnabled">
         <RouterLink

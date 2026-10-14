@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -12,30 +13,33 @@ import {
   HeartIcon,
   MapPinIcon,
   SparklesIcon,
+  StarIcon,
   UsersIcon,
   XMarkIcon,
 } from '@heroicons/vue/24/outline'
 import { getPublicCommunity } from '../services/communityService'
 import { getBrowserCoordinates } from '../modules/locationFilters'
+import { usePublicAdRotation } from '../composables/usePublicAdRotation'
 import { useAuthStore } from '../stores/auth'
 import { useAppearanceStore } from '../stores/appearance'
+import ScrollAdSlot from '../components/community/ScrollAdSlot.vue'
+import CommunityMapSection from '../components/community/CommunityMapSection.vue'
 
+const router = useRouter()
 const auth = useAuthStore()
 const appearance = useAppearanceStore()
-const community = ref({ congregations: [], events: [], posts: [], moduleUpdates: [] })
+const community = ref({ congregations: [], events: [], posts: [], moduleUpdates: [], ads: [], syntheticFixturesEnabled: false })
+const { ads: liveAds } = usePublicAdRotation()
 const loading = ref(true)
 const errorMessage = ref('')
 const selectedCongregation = ref('all')
 const publicationType = ref('all')
 const selectedPost = ref(null)
 const postDialog = ref(null)
-const publicMapElement = ref(null)
 const selectedLocationId = ref('')
 const selectedCommunityArea = ref('all')
+const areaSearchQuery = ref('')
 const publicScrollZoom = ref(false)
-let publicMap
-let publicMarkerLayer
-const publicMarkers = new Map()
 const managementRoute = computed(() => auth.user ? { name: 'dashboard' } : { name: 'login' })
 const managementLabel = computed(() => auth.user ? 'Panel de gestión' : 'Iniciar sesión')
 const brandIcons = { church: BuildingLibraryIcon, book: BookOpenIcon, heart: HeartIcon, community: GlobeAltIcon, light: SparklesIcon }
@@ -50,18 +54,30 @@ const appearanceStyle = computed(() => ({
   '--community-ink': appearance.settings.colors.text,
 }))
 
-const visibleEvents = computed(() => community.value.events.filter((event) => (
-  selectedCongregation.value === 'all' || event.locationId === selectedCongregation.value
-)))
+const visibleEvents = computed(() => {
+  const realEvents = community.value.events.filter((event) => (
+    selectedCongregation.value === 'all' || event.locationId === selectedCongregation.value
+  ))
+  const syntheticEvents = community.value.moduleUpdates.filter((event) => (
+    event.moduleId === 'events'
+    && event.synthetic
+    && (selectedCongregation.value === 'all' || event.congregationId === selectedCongregation.value)
+  ))
+  return [...realEvents, ...syntheticEvents].sort((first, second) => new Date(first.startsAt) - new Date(second.startsAt))
+})
 const selectedCongregationDetail = computed(() => {
   if (selectedCongregation.value === 'all') return null
   return community.value.congregations.find(({ id }) => id === selectedCongregation.value) || null
 })
 const selectedCongregationEventList = computed(() => {
   if (!selectedCongregationDetail.value) return []
-  return community.value.events
-    .filter((event) => event.locationId === selectedCongregationDetail.value.id)
-    .sort((first, second) => new Date(first.startsAt) - new Date(second.startsAt))
+  const realEvents = community.value.events.filter((event) => event.locationId === selectedCongregationDetail.value.id)
+  const syntheticEvents = community.value.moduleUpdates.filter((event) => (
+    event.moduleId === 'events'
+    && event.synthetic
+    && event.congregationId === selectedCongregationDetail.value.id
+  ))
+  return [...realEvents, ...syntheticEvents].sort((first, second) => new Date(first.startsAt) - new Date(second.startsAt))
 })
 const selectedCongregationPostList = computed(() => {
   if (!selectedCongregationDetail.value) return []
@@ -71,9 +87,20 @@ const selectedCongregationPostList = computed(() => {
 })
 const congregationCards = computed(() => community.value.congregations.map((congregation) => ({
   ...congregation,
-  eventCount: community.value.events.filter((event) => event.locationId === congregation.id).length,
+  upcomingEvents: [
+    ...community.value.events.filter((event) => event.locationId === congregation.id),
+    ...community.value.moduleUpdates.filter((event) => event.moduleId === 'events'
+      && event.congregationId === congregation.id),
+  ]
+    .filter((event) => Date.parse(event.startsAt) >= Date.now())
+    .sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt)),
+  eventCount: community.value.events.filter((event) => event.locationId === congregation.id).length
+    + community.value.moduleUpdates.filter((event) => event.moduleId === 'events'
+      && event.congregationId === congregation.id).length,
   postCount: community.value.posts.filter((post) => post.locationId === congregation.id).length,
-  updateCount: community.value.moduleUpdates.filter((update) => update.organizationId === congregation.organizationId).length,
+  updateCount: community.value.moduleUpdates.filter((update) => update.synthetic
+    ? update.congregationId === congregation.id
+    : update.organizationId === congregation.organizationId).length,
 })))
 const visiblePosts = computed(() => community.value.posts.filter((post) => (
   (selectedCongregation.value === 'all' || post.locationId === selectedCongregation.value)
@@ -82,7 +109,10 @@ const visiblePosts = computed(() => community.value.posts.filter((post) => (
 const selectedOrganizationId = computed(() => community.value.congregations
   .find(({ id }) => id === selectedCongregation.value)?.organizationId)
 const visibleModuleUpdates = computed(() => community.value.moduleUpdates.filter((update) => (
-  selectedCongregation.value === 'all' || update.organizationId === selectedOrganizationId.value
+  selectedCongregation.value === 'all'
+  || (update.synthetic
+    ? update.congregationId === selectedCongregation.value
+    : update.organizationId === selectedOrganizationId.value)
 )))
 const groupItemsByOrganization = (items = []) => {
   const grouped = new Map()
@@ -107,7 +137,7 @@ const groupItemsByOrganization = (items = []) => {
 }
 
 const communityAreaSections = computed(() => {
-  const updateSections = ['groups', 'attendance', 'resources', 'communications', 'reports', 'settings'].map((moduleId) => ({
+  const updateSections = ['members', 'reservations', 'groups', 'attendance', 'resources', 'communications', 'reports', 'settings'].map((moduleId) => ({
     id: moduleId,
     label: moduleUpdateLabel(moduleId),
     items: visibleModuleUpdates.value.filter((update) => update.moduleId === moduleId).map((update) => ({
@@ -119,12 +149,16 @@ const communityAreaSections = computed(() => {
     {
       id: 'events',
       label: 'Encuentros',
-      items: visibleEvents.value.map((event) => ({
-        ...event,
-        description: event.description,
-        detail: `${event.attendeeCount} ${event.attendeeCount === 1 ? 'persona inscrita' : 'personas inscritas'}`,
-        date: event.startsAt,
-      })),
+      items: [
+        ...visibleEvents.value.map((event) => ({
+          ...event,
+          description: event.description,
+          detail: `${event.attendeeCount} ${event.attendeeCount === 1 ? 'persona inscrita' : 'personas inscritas'}`,
+          date: event.startsAt,
+        })),
+        ...visibleModuleUpdates.value.filter((update) => update.synthetic && update.moduleId === 'events')
+          .map((event) => ({ ...event, date: event.recordDate || event.startsAt })),
+      ],
     },
     ...updateSections,
     {
@@ -154,54 +188,82 @@ const communityAreaSections = computed(() => {
   }))
 })
 const communityAreas = computed(() => [
-  { id: 'all', label: 'Todo el tablero', count: communityAreaSections.value.reduce((total, section) => total + section.count, 0) },
-  ...communityAreaSections.value.map(({ id, label, count }) => ({ id, label, count })),
+  {
+    id: 'all',
+    label: 'Todo el tablero',
+    description: 'Agenda, sedes y contenido publicado',
+    count: communityAreaSections.value.reduce((total, section) => total + section.count, 0),
+  },
+  ...communityAreaSections.value.map(({ id, label, count }) => ({
+    id,
+    label,
+    count,
+    description: communityAreaDescriptions[id] || 'Contenido compartido por la congregación',
+  })),
 ])
 const visibleCommunityAreaSections = computed(() => communityAreaSections.value
-  .filter(({ id, count }) => count && (selectedCommunityArea.value === 'all' || id === selectedCommunityArea.value)))
+  .filter(({ id, count }) => selectedCommunityArea.value === 'all' ? count > 0 : id === selectedCommunityArea.value)
+  .map((section) => {
+    const query = areaSearchQuery.value.trim().toLowerCase()
+    const organizationGroups = section.organizationGroups
+      .map((group) => ({
+        ...group,
+        items: query
+          ? group.items.filter((entry) => {
+              const haystack = [
+                entry.title,
+                entry.description,
+                entry.congregation,
+                entry.name,
+                entry.status,
+                entry.detail,
+                areaRecordType(section.id, entry),
+              ].filter(Boolean).join(' ').toLowerCase()
+              return haystack.includes(query)
+            })
+          : group.items,
+      }))
+      .filter((group) => group.items.length > 0)
+
+    return {
+      ...section,
+      count: organizationGroups.reduce((total, group) => total + group.items.length, 0),
+      organizationGroups,
+    }
+  })
+  .filter((section) => section.count > 0))
 const mapLocations = computed(() => community.value.congregations.filter((location) => (
   selectedCongregation.value === 'all' || location.id === selectedCongregation.value
 )))
-const eventGroups = computed(() => {
-  const grouped = new Map()
-  for (const event of visibleEvents.value) {
-    if (!grouped.has(event.locationId)) {
-      const congregation = community.value.congregations.find(({ id }) => id === event.locationId)
-      grouped.set(event.locationId, {
-        id: event.locationId,
-        name: event.congregation,
-        city: event.city,
-        address: event.address,
-        latitude: congregation?.latitude ?? event.latitude,
-        longitude: congregation?.longitude ?? event.longitude,
-        events: [],
-      })
+const agendaGroups = computed(() => mapLocations.value
+  .map((congregation) => {
+    const realEvents = community.value.events
+      .filter((event) => event.locationId === congregation.id)
+      .map((event) => ({ ...event, synthetic: false }))
+    const syntheticEvents = community.value.moduleUpdates
+      .filter((event) => event.moduleId === 'events' && event.congregationId === congregation.id)
+      .map((event) => ({ ...event, synthetic: true }))
+    return {
+      id: congregation.id,
+      name: congregation.name,
+      city: congregation.city,
+      address: congregation.address,
+      latitude: congregation.latitude,
+      longitude: congregation.longitude,
+      events: [...realEvents, ...syntheticEvents]
+        .filter((event) => Date.parse(event.startsAt) >= Date.now())
+        .sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt)),
     }
-    grouped.get(event.locationId).events.push(event)
-  }
-  return [...grouped.values()]
-    .map((group) => ({ ...group, events: group.events.sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt)) }))
-    .sort((first, second) => Date.parse(first.events[0]?.startsAt || 0) - Date.parse(second.events[0]?.startsAt || 0)
-      || first.name.localeCompare(second.name, 'es-MX'))
-})
-const congregationGroups = computed(() => mapLocations.value
-  .map((location) => ({
-    id: location.id,
-    name: location.name,
-    city: location.city,
-    address: location.address,
-    latitude: location.latitude,
-    longitude: location.longitude,
-    events: visibleEvents.value.filter(({ locationId }) => locationId === location.id)
-      .sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt)),
-  }))
-  .sort((first, second) => first.name.localeCompare(second.name, 'es-MX')))
-const visibleLocationGroups = computed(() => eventGroups.value.length ? eventGroups.value : congregationGroups.value)
+  })
+  .sort((first, second) => Date.parse(first.events[0]?.startsAt || '9999-12-31') - Date.parse(second.events[0]?.startsAt || '9999-12-31')
+    || first.name.localeCompare(second.name, 'es-MX')))
+const totalUpcomingEvents = computed(() => agendaGroups.value.reduce((total, group) => total + group.events.length, 0))
+const agendaCongregationCount = computed(() => agendaGroups.value.filter(({ events }) => events.length).length)
 const selectedLocation = computed(() => community.value.congregations.find(({ id }) => id === selectedLocationId.value))
 const selectedLocationEvents = computed(() => community.value.events
   .filter(({ locationId }) => locationId === selectedLocationId.value)
   .sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt)))
-const eventCountLabel = computed(() => `${visibleEvents.value.length} ${visibleEvents.value.length === 1 ? 'próximo encuentro' : 'próximos encuentros'}`)
+const eventCountLabel = computed(() => `${totalUpcomingEvents.value} ${totalUpcomingEvents.value === 1 ? 'próximo encuentro' : 'próximos encuentros'}`)
 
 function formatDate(value, options = {}) {
   return new Intl.DateTimeFormat('es-MX', {
@@ -234,6 +296,8 @@ function formatEventTime(value) {
 
 function moduleUpdateLabel(moduleId) {
   return ({
+    members: 'Miembros',
+    reservations: 'Reservas',
     groups: 'Grupos',
     attendance: 'Asistencia',
     resources: 'Recursos',
@@ -241,6 +305,53 @@ function moduleUpdateLabel(moduleId) {
     reports: 'Reportes',
     settings: 'Preferencias',
   })[moduleId] || 'Actualización'
+}
+
+const communityAreaDescriptions = {
+  events: 'Próximos encuentros con fecha y sede',
+  members: 'Registros sintéticos de participantes para pruebas',
+  reservations: 'Reservas de espacios para pruebas, no operativas',
+  groups: 'Grupos y espacios de participación',
+  attendance: 'Sesiones y asistencia registrada',
+  resources: 'Recursos compartidos por la congregación',
+  communications: 'Avisos y comunicaciones publicadas',
+  reports: 'Informes autorizados para consulta pública',
+  settings: 'Preferencias que la congregación decidió compartir',
+  posts: 'Historias, noticias y actividades publicadas',
+  locations: 'Sedes y ubicaciones registradas',
+}
+
+function areaRecordType(sectionId, entry) {
+  if (sectionId === 'events') return 'Encuentro'
+  if (sectionId === 'posts') return entry.type === 'activity' ? 'Actividad' : 'Publicación'
+  if (sectionId === 'locations') return 'Sede'
+  return ({
+    members: 'Miembro sintético',
+    reservations: 'Reserva sintética',
+    groups: 'Grupo',
+    attendance: 'Asistencia',
+    resources: 'Recurso',
+    communications: 'Comunicación',
+    reports: 'Informe',
+    settings: 'Preferencia',
+  })[sectionId] || 'Registro'
+}
+
+function areaIcon(moduleId) {
+  return ({
+    all: GlobeAltIcon,
+    events: CalendarDaysIcon,
+    members: UsersIcon,
+    reservations: ClockIcon,
+    groups: HeartIcon,
+    attendance: UsersIcon,
+    resources: BookOpenIcon,
+    communications: GlobeAltIcon,
+    reports: CalendarDaysIcon,
+    settings: SparklesIcon,
+    posts: BookOpenIcon,
+    locations: MapPinIcon,
+  })[moduleId] || BuildingLibraryIcon
 }
 
 async function loadCommunity() {
@@ -267,111 +378,30 @@ async function loadCommunity() {
   } finally {
     loading.value = false
     await nextTick()
-    renderPublicMap()
   }
 }
 
-function createLocationPopup(location) {
-  const popup = document.createElement('div')
-  popup.className = 'community-map-popup'
-  const title = document.createElement('strong')
-  title.textContent = location.name
-  const address = document.createElement('span')
-  address.className = 'community-map-popup-address'
-  address.textContent = [location.address, location.city].filter(Boolean).join(' · ') || 'Dirección no disponible'
-  const activityCount = document.createElement('small')
-  const locationEvents = community.value.events
-    .filter(({ locationId }) => locationId === location.id)
-    .sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt))
-  const count = locationEvents.length
-  activityCount.textContent = `${count} ${count === 1 ? 'próxima actividad' : 'próximas actividades'}`
-  popup.append(title, address, activityCount)
-
-  if (locationEvents[0]) {
-    const nextEvent = document.createElement('span')
-    nextEvent.className = 'community-map-popup-next'
-    nextEvent.textContent = `Próxima: ${locationEvents[0].title} · ${formatEventDate(locationEvents[0].startsAt)}`
-    popup.append(nextEvent)
-  }
-
-  const directions = document.createElement('a')
-  directions.className = 'community-map-popup-directions'
-  directions.href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${location.latitude},${location.longitude}`)}`
-  directions.target = '_blank'
-  directions.rel = 'noopener noreferrer'
-  directions.textContent = 'Cómo llegar'
-  directions.setAttribute('aria-label', `Indicaciones para llegar a ${location.name}`)
-  popup.append(directions)
-  return popup
-}
-
-function renderPublicMap() {
-  if (!publicMapElement.value) return
-  const locations = mapLocations.value.filter(({ latitude, longitude }) => (
-    Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))
-      && Number(latitude) >= -90 && Number(latitude) <= 90
-      && Number(longitude) >= -180 && Number(longitude) <= 180
-  ))
-  const first = locations[0] || { latitude: 19.4326, longitude: -99.1332 }
-  if (!publicMap) {
-    publicMap = L.map(publicMapElement.value, { scrollWheelZoom: publicScrollZoom.value }).setView([first.latitude, first.longitude], locations.length ? 11 : 5)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(publicMap)
-    publicMarkerLayer = L.layerGroup().addTo(publicMap)
-  }
-
-  publicMarkerLayer.clearLayers()
-  publicMarkers.clear()
-  locations.forEach((location) => {
-    const marker = L.circleMarker([location.latitude, location.longitude], {
-      radius: location.id === selectedLocationId.value ? 10 : 8,
-      color: '#ffffff',
-      weight: 3,
-      fillColor: location.id === selectedLocationId.value ? '#c35f46' : '#28755b',
-      fillOpacity: 1,
-    }).addTo(publicMarkerLayer)
-    marker.bindTooltip(location.name, {
-      permanent: true,
-      direction: 'top',
-      offset: [0, -9],
-      className: 'community-marker-label',
-    })
-    marker.bindPopup(createLocationPopup(location))
-    marker.on('click', () => {
-      selectLocation(location.id)
-      marker.openPopup()
-    })
-    marker.on('popupopen', () => selectLocation(location.id, false))
-    publicMarkers.set(location.id, marker)
-  })
-
-  if (locations.length > 1) {
-    publicMap.fitBounds(locations.map(({ latitude, longitude }) => [Number(latitude), Number(longitude)]), { padding: [34, 34], maxZoom: 14 })
-  } else if (locations.length === 1) {
-    publicMap.setView([Number(first.latitude), Number(first.longitude)], 13)
-  }
-  publicMap.invalidateSize()
-  if (publicScrollZoom.value) publicMap.scrollWheelZoom.enable()
-  else publicMap.scrollWheelZoom.disable()
+function openCongregationProfile(locationId) {
+  if (!locationId) return
+  selectLocation(locationId, false)
+  router.push({ name: 'congregation-profile', params: { congregationId: locationId } })
 }
 
 function selectLocation(locationId, focusMap = true) {
   selectedLocationId.value = locationId
-  publicMarkers.forEach((marker, id) => marker.setStyle({
-    fillColor: id === locationId ? '#c35f46' : '#28755b',
-    radius: id === locationId ? 10 : 8,
-  }))
-  const location = community.value.congregations.find(({ id }) => id === locationId)
-  if (focusMap && location && publicMap && Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))) {
-    publicMap.flyTo([location.latitude, location.longitude], Math.max(publicMap.getZoom(), 13), { duration: 0.45 })
+  if (selectedCongregation.value !== 'all' && selectedCongregation.value !== locationId) {
+    selectedCongregation.value = locationId
   }
+  if (!focusMap) return
+  nextTick(() => {
+    const mapSection = document.querySelector('.community-map-frame')
+    mapSection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
 }
 
 async function focusPublicMapOnSelection() {
   const location = community.value.congregations.find(({ id }) => id === selectedLocationId.value)
-  if (!publicMap || !location) return
+  if (!location) return
 
   const latitude = Number(location.latitude)
   const longitude = Number(location.longitude)
@@ -382,27 +412,30 @@ async function focusPublicMapOnSelection() {
     const bounds = L.latLngBounds(
       [[userLocation.lat, userLocation.lng], [latitude, longitude]],
     ).pad(0.35)
-    publicMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 13 })
+    document.querySelector('.community-map-canvas')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return bounds
   } catch {
-    publicMap.flyTo([latitude, longitude], Math.max(publicMap.getZoom(), 12), { duration: 0.4 })
+    return null
   }
 }
 
 function onCongregationChange() {
   const visibleLocationIds = new Set(mapLocations.value.map(({ id }) => id))
   if (selectedCongregation.value !== 'all') {
-    selectLocation(selectedCongregation.value, false)
+    selectedLocationId.value = selectedCongregation.value
+    selectLocation(selectedCongregation.value, true)
   } else if (!visibleLocationIds.has(selectedLocationId.value)) {
     selectedLocationId.value = community.value.events[0]?.locationId || community.value.congregations[0]?.id || ''
   }
-  nextTick(renderPublicMap)
 }
 
-function togglePublicScrollZoom() {
-  publicScrollZoom.value = !publicScrollZoom.value
-  if (!publicMap) return
-  if (publicScrollZoom.value) publicMap.scrollWheelZoom.enable()
-  else publicMap.scrollWheelZoom.disable()
+function showAllCongregations() {
+  selectedCongregation.value = 'all'
+  selectedLocationId.value = community.value.congregations[0]?.id || ''
+}
+
+function togglePublicScrollZoom(value = !publicScrollZoom.value) {
+  publicScrollZoom.value = value
 }
 
 async function openPost(post) {
@@ -424,7 +457,6 @@ onMounted(() => {
   loadCommunity()
   auth.checkSession()
 })
-onBeforeUnmount(() => publicMap?.remove())
 </script>
 
 <template>
@@ -435,9 +467,10 @@ onBeforeUnmount(() => publicMap?.remove())
         <span>{{ appearance.settings.brandName }}</span>
       </RouterLink>
       <nav class="community-nav-links" aria-label="Navegación pública">
-        <a href="#agenda">Próximos encuentros</a>
-        <a href="#aportes">Aportes</a>
-        <a href="#historias">Blog y actividades</a>
+        <a href="#congregaciones">Congregaciones</a>
+        <a href="#agenda">Agenda</a>
+        <a href="#areas">Áreas</a>
+        <a href="#historias">Historias</a>
       </nav>
       <RouterLink class="community-admin-link" :to="managementRoute" :aria-label="managementLabel">
         {{ managementLabel }} <ArrowRightIcon aria-hidden="true" />
@@ -460,6 +493,16 @@ onBeforeUnmount(() => publicMap?.remove())
         <div class="community-hero-image">
           <img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1500&q=88" alt="Personas reunidas en una actividad comunitaria" fetchpriority="high" />
           <span class="community-image-caption"><UsersIcon aria-hidden="true" /> Un lugar en la mesa para cada persona</span>
+        </div>
+      </section>
+
+      <section class="community-quick-nav" aria-label="Navegación rápida de la comunidad">
+        <p class="community-eyebrow">NAVEGACIÓN RÁPIDA</p>
+        <div class="community-quick-nav-list">
+          <a href="#congregaciones">Congregaciones</a>
+          <a href="#agenda">Agenda</a>
+          <a href="#areas">Áreas</a>
+          <a href="#historias">Historias</a>
         </div>
       </section>
 
@@ -492,14 +535,19 @@ onBeforeUnmount(() => publicMap?.remove())
         </div>
       </section>
 
-      <section class="community-section community-congregation-gallery-section" aria-label="Galería de congregaciones">
+      <section id="congregaciones" class="community-section community-congregation-gallery-section" aria-label="Galería de congregaciones">
         <div class="community-section-heading">
           <div>
             <p class="community-eyebrow">CONGREGACIONES DISPONIBLES</p>
             <h2>Selecciona una congregación</h2>
             <p>Explora todas las sedes públicas y elige la que quieras conocer en detalle.</p>
           </div>
-          <span class="community-updates-count">{{ congregationCards.length }} congregaciones</span>
+          <div class="community-gallery-tools">
+            <span class="community-updates-count">{{ congregationCards.length }} congregaciones</span>
+            <button class="community-show-all-button" type="button" :disabled="selectedCongregation === 'all'" @click="showAllCongregations">
+              <XMarkIcon aria-hidden="true" /> Mostrar todas
+            </button>
+          </div>
         </div>
 
         <div v-if="congregationCards.length" class="community-congregation-grid">
@@ -509,18 +557,29 @@ onBeforeUnmount(() => publicMap?.remove())
             type="button"
             class="community-congregation-card"
             :class="{ active: selectedCongregation === congregation.id }"
-            @click="selectedCongregation = congregation.id; selectedLocationId = congregation.id; nextTick(renderPublicMap)"
+            @click="selectedCongregation = congregation.id; selectedLocationId = congregation.id; selectLocation(congregation.id, true)"
           >
             <div class="community-congregation-card-header">
               <span class="community-congregation-pin"><MapPinIcon aria-hidden="true" /></span>
-              <span class="community-congregation-tag">{{ congregation.city }}</span>
+              <span class="community-congregation-tag">{{ congregation.city }} · {{ congregation.type }}</span>
             </div>
             <h3>{{ congregation.name }}</h3>
-            <p>{{ congregation.address || 'Ubicación pública disponible' }}</p>
+            <p>{{ congregation.address || 'Dirección no incluida en la ficha' }}</p>
+            <div class="community-congregation-next-event">
+              <CalendarDaysIcon aria-hidden="true" />
+              <div v-if="congregation.upcomingEvents[0]" class="community-congregation-next-event-copy">
+                <span>Próximo encuentro<span v-if="congregation.upcomingEvents[0].synthetic" class="community-congregation-event-synthetic"> · sintético</span></span>
+                <strong>{{ congregation.upcomingEvents[0].title }}</strong>
+                <small>{{ formatEventDate(congregation.upcomingEvents[0].startsAt) }} · {{ formatEventTime(congregation.upcomingEvents[0].startsAt) }}</small>
+              </div>
+              <div v-else class="community-congregation-next-event-copy">
+                <span>Próximo encuentro</span>
+                <small>Sin encuentros programados</small>
+              </div>
+            </div>
             <div class="community-congregation-stats">
-              <span>{{ congregation.eventCount }} eventos</span>
-              <span>{{ congregation.postCount }} posts</span>
-              <span>{{ congregation.updateCount }} aportes</span>
+              <span v-if="congregation.rating !== null && congregation.rating !== undefined" class="community-congregation-rating"><StarIcon aria-hidden="true" />{{ Number(congregation.rating).toFixed(1) }}</span>
+              <span v-if="congregation.reviewCount !== null && congregation.reviewCount !== undefined">{{ congregation.reviewCount }} reseñas en Maps</span>
             </div>
           </button>
         </div>
@@ -563,6 +622,8 @@ onBeforeUnmount(() => publicMap?.remove())
         </div>
       </section>
 
+      <ScrollAdSlot :ads="liveAds" placement="content" :slot-index="0" :slot-count="3" :slot-seed="4" />
+
       <section id="agenda" class="community-section community-agenda-section">
         <div class="community-section-heading">
           <div>
@@ -582,9 +643,9 @@ onBeforeUnmount(() => publicMap?.remove())
         </div>
 
         <div class="community-dashboard-summary" aria-label="Resumen público de la comunidad">
-          <div><span>Sedes activas</span><strong>{{ community.congregations.length }}</strong></div>
-          <div><span>Próximos encuentros</span><strong>{{ community.events.length }}</strong></div>
-          <div><span>Publicaciones y aportes</span><strong>{{ community.posts.length + community.moduleUpdates.length }}</strong></div>
+            <div><span>Sedes activas</span><strong>{{ community.congregations.length }}</strong></div>
+          <div><span>Próximos encuentros</span><strong>{{ totalUpcomingEvents }}</strong></div>
+          <div><span>{{ community.syntheticFixturesEnabled ? 'Registros de prueba' : 'Publicaciones y aportes' }}</span><strong>{{ community.syntheticFixturesEnabled ? community.moduleUpdates.length : community.posts.length + community.moduleUpdates.length }}</strong></div>
           <span class="community-dashboard-source">Información publicada por las congregaciones</span>
         </div>
 
@@ -596,138 +657,170 @@ onBeforeUnmount(() => publicMap?.remove())
         <section v-else class="community-agenda-slider" aria-label="Mapa y agenda comunitaria">
           <div class="community-agenda-slider-heading">
             <div>
-              <p class="community-eyebrow">TABLERO DE ACTIVIDADES</p>
-              <h3>Encuentros por congregación</h3>
+              <p class="community-eyebrow">{{ community.syntheticFixturesEnabled ? 'PIZARRA · DATOS DE PRUEBA' : 'AGENDA COMUNITARIA' }}</p>
+              <h3>Próximos encuentros por sede</h3>
             </div>
             <span>{{ eventCountLabel }}</span>
           </div>
           <div class="community-agenda-workspace">
-          <section class="community-map-column" aria-label="Mapa de congregaciones y actividades">
-            <div class="community-map-frame">
-              <div ref="publicMapElement" class="community-map-canvas" aria-label="Mapa Leaflet de ubicaciones con actividades"></div>
-              <div class="community-map-controls" aria-label="Controles del mapa">
-                <button class="community-map-control" type="button" @click="focusPublicMapOnSelection">Centrar cerca de ti</button>
-                <button class="community-map-control" type="button" @click="togglePublicScrollZoom">{{ publicScrollZoom ? 'Zoom rueda: on' : 'Zoom rueda: off' }}</button>
-              </div>
-              <div v-if="!mapLocations.some(({ latitude, longitude }) => Number.isFinite(Number(latitude)) && Number(latitude) >= -90 && Number(latitude) <= 90 && Number.isFinite(Number(longitude)) && Number(longitude) >= -180 && Number(longitude) <= 180)" class="community-map-empty">
-                <MapPinIcon aria-hidden="true" /><span>{{ selectedCongregation === 'all' ? 'El mapa mostrará las ubicaciones cuando haya congregaciones activas con coordenadas.' : 'Esta congregación aún no tiene coordenadas disponibles.' }}</span>
-              </div>
-            </div>
-            <article v-if="selectedLocation" class="community-location-summary">
-              <div class="community-location-summary-heading">
-                <span class="community-location-pin"><MapPinIcon aria-hidden="true" /></span>
-                <div><p class="community-eyebrow">UBICACIÓN SELECCIONADA</p><h3>{{ selectedLocation.name }}</h3></div>
-                <span class="community-location-count">{{ selectedLocationEvents.length }} {{ selectedLocationEvents.length === 1 ? 'actividad' : 'actividades' }}</span>
-              </div>
-              <p class="community-location-address">{{ [selectedLocation.address, selectedLocation.city].filter(Boolean).join(' · ') }}</p>
-              <p v-if="selectedLocationEvents[0]" class="community-location-next">
-                <CalendarDaysIcon aria-hidden="true" /> Próxima: {{ selectedLocationEvents[0].title }} · {{ formatEventDate(selectedLocationEvents[0].startsAt) }}
-              </p>
-              <div class="community-location-actions">
-                <a class="community-directions-link" :href="`https://www.google.com/maps/dir/?api=1&destination=${selectedLocation.latitude},${selectedLocation.longitude}`" target="_blank" rel="noopener noreferrer">
-                  Cómo llegar <ArrowRightIcon aria-hidden="true" />
-                </a>
-                <RouterLink class="community-profile-link" :to="{ name: 'congregation-profile', params: { congregationId: selectedLocation.id } }">
-                  Ver perfil completo
-                </RouterLink>
-              </div>
-            </article>
-            <div v-else class="community-location-summary community-location-summary-empty">
-              <MapPinIcon aria-hidden="true" />
-              <p>Las ubicaciones disponibles aparecerán aquí cuando sus congregaciones publiquen actividades.</p>
-            </div>
-          </section>
+          <CommunityMapSection
+            :locations="mapLocations"
+            :selected-location-id="selectedLocationId"
+            :selected-location="selectedLocation"
+            :selected-location-events="selectedLocationEvents"
+            :scroll-zoom="publicScrollZoom"
+            @select-location="({ locationId, focusMap }) => selectLocation(locationId, focusMap)"
+            @toggle-scroll-zoom="togglePublicScrollZoom"
+            @open-profile="openCongregationProfile"
+          />
 
-          <section class="community-activity-column community-agenda-slide" aria-label="Actividades agrupadas por congregación">
+          <section class="community-activity-column community-agenda-slide" aria-label="Pizarra de próximos encuentros por congregación">
             <div class="community-activity-heading">
-              <div><p class="community-eyebrow">ORDENADAS POR PRÓXIMO ENCUENTRO</p><h3>{{ eventCountLabel }}</h3></div>
-              <span>{{ eventGroups.length }} {{ eventGroups.length === 1 ? 'congregación' : 'congregaciones' }}</span>
+              <div><p class="community-eyebrow">FECHA · HORA · SEDE</p><h3>{{ eventCountLabel }}</h3></div>
+              <span>{{ agendaCongregationCount }} {{ agendaCongregationCount === 1 ? 'sede activa' : 'sedes activas' }}</span>
             </div>
-            <div v-if="visibleLocationGroups.length" class="community-location-groups">
-              <section v-for="group in visibleLocationGroups" :key="group.id" class="community-location-group">
-                <button class="community-location-group-heading" type="button" :aria-pressed="selectedLocationId === group.id" @click="selectLocation(group.id)">
-                  <span class="community-group-marker"><MapPinIcon aria-hidden="true" /></span>
-                  <span class="community-group-title"><strong>{{ group.name }}</strong><small>{{ group.city }}<template v-if="group.address"> · {{ group.address }}</template></small></span>
-                  <span class="community-group-total">{{ group.events.length }}</span>
+            <div v-if="agendaGroups.length" class="community-agenda-board">
+              <article v-for="group in agendaGroups" :key="group.id" class="community-agenda-board-column" :class="{ 'community-agenda-board-column-empty': !group.events.length }">
+                <button class="community-agenda-board-location" type="button" :aria-pressed="selectedLocationId === group.id" @click="selectedLocationId = group.id; selectedCongregation = group.id; selectLocation(group.id, true)">
+                  <MapPinIcon aria-hidden="true" />
+                  <span><strong>{{ group.name }}</strong><small>{{ group.city }}<template v-if="group.address"> · {{ group.address }}</template></small></span>
+                  <b>{{ group.events.length }}</b>
                 </button>
-                <template v-if="group.events.length">
-                  <article v-for="event in group.events" :key="event.id" class="community-activity-row">
-                    <time class="community-activity-date" :datetime="event.startsAt"><span>{{ formatMonth(event.startsAt) }}</span><strong>{{ formatDate(event.startsAt, { day: 'numeric' }) }}</strong></time>
-                    <div class="community-activity-copy">
-                      <span>{{ formatEventDate(event.startsAt) }} · {{ formatEventTime(event.startsAt) }}</span>
+                <div v-if="group.events.length" class="community-agenda-board-cards">
+                  <article v-for="event in group.events" :key="event.id" class="community-agenda-board-card" :class="{ 'community-agenda-board-card-synthetic': event.synthetic }">
+                    <div class="community-agenda-board-date">
+                      <span>{{ formatMonth(event.startsAt) }}</span>
+                      <strong>{{ formatDate(event.startsAt, { day: 'numeric' }) }}</strong>
+                    </div>
+                    <div class="community-agenda-board-copy">
+                      <div class="community-agenda-board-meta">
+                        <time :datetime="event.startsAt">{{ formatEventDate(event.startsAt) }} · {{ formatEventTime(event.startsAt) }}</time>
+                        <span v-if="event.synthetic">SINTÉTICO</span>
+                      </div>
                       <h4>{{ event.title }}</h4>
                       <p>{{ event.description }}</p>
-                      <small><UsersIcon aria-hidden="true" /> {{ event.attendeeCount }} {{ event.attendeeCount === 1 ? 'persona inscrita' : 'personas inscritas' }}</small>
+                      <small v-if="!event.synthetic"><UsersIcon aria-hidden="true" /> {{ event.attendeeCount || 0 }} {{ event.attendeeCount === 1 ? 'inscripción' : 'inscripciones' }}</small>
                     </div>
                   </article>
-                </template>
-                <div v-else class="community-location-group-empty">
-                  <span>Sin encuentros públicos aún</span>
                 </div>
-              </section>
+                <p v-else class="community-agenda-board-empty">No hay encuentros programados.</p>
+              </article>
             </div>
             <div v-else class="community-empty community-activity-empty">
               <CalendarDaysIcon aria-hidden="true" />
-              <p>{{ selectedCongregation === 'all' ? 'Todavía no hay encuentros públicos próximos.' : 'Esta congregación no tiene encuentros próximos.' }}</p>
-              <span>Vuelve pronto para ver nuevas actividades abiertas.</span>
+              <p>{{ selectedCongregation === 'all' ? 'Todavía no hay encuentros próximos.' : 'Esta congregación no tiene encuentros próximos.' }}</p>
             </div>
           </section>
           </div>
         </section>
-        <div class="community-agenda-foot"><span>{{ eventCountLabel }}</span><span>Eventos públicos · Datos agrupados por congregación</span></div>
+        <div class="community-agenda-foot"><span>{{ eventCountLabel }}</span><span>{{ community.syntheticFixturesEnabled ? 'La etiqueta SINTÉTICO identifica eventos de prueba.' : 'Agenda organizada por congregación y sede.' }}</span></div>
       </section>
 
-      <section id="aportes" class="community-section community-updates-section">
+      <ScrollAdSlot :ads="liveAds" placement="community" :slot-index="0" :slot-count="3" :slot-seed="0" />
+
+      <section id="areas" class="community-section community-updates-section">
         <div class="community-section-heading">
           <div>
-            <p class="community-eyebrow">MAPA ORGANIZACIONAL PÚBLICO</p>
+            <p class="community-eyebrow">{{ community.syntheticFixturesEnabled ? 'MÓDULOS · ENTORNO DE PRUEBA' : 'MAPA ORGANIZACIONAL PÚBLICO' }}</p>
             <h2>La vida de la congregación, por áreas</h2>
-            <p>Explora encuentros, sedes y aportes que cada equipo autorizó compartir.</p>
+            <p>{{ community.syntheticFixturesEnabled ? 'Explora los registros sintéticos privados por congregación y módulo.' : 'Explora encuentros, sedes y aportes que cada equipo autorizó compartir.' }}</p>
           </div>
-          <span class="community-updates-count">{{ communityAreas[0].count }} {{ communityAreas[0].count === 1 ? 'elemento público' : 'elementos públicos' }}</span>
+          <span class="community-updates-count">{{ communityAreas[0].count }} {{ community.syntheticFixturesEnabled ? 'registros de prueba' : communityAreas[0].count === 1 ? 'elemento público' : 'elementos públicos' }}</span>
+        </div>
+        <div v-if="community.syntheticFixturesEnabled" class="community-synthetic-notice" role="status">
+          <strong>Entorno de prueba: datos sintéticos</strong>
+          <span>Los registros etiquetados como sintéticos son ilustrativos, privados y no han sido confirmados por las congregaciones.</span>
         </div>
         <div class="community-org-map">
           <div class="community-org-root">
             <span class="community-org-root-icon"><GlobeAltIcon aria-hidden="true" /></span>
-            <span><strong>Comunidad abierta</strong><small>{{ selectedCongregation === 'all' ? 'Todas las congregaciones' : community.congregations.find(({ id }) => id === selectedCongregation)?.name }}</small></span>
+            <span><strong>{{ selectedCommunityArea === 'all' ? 'Comunidad abierta' : communityAreas.find(({ id }) => id === selectedCommunityArea)?.label }}</strong><small>{{ selectedCongregation === 'all' ? 'Todas las congregaciones' : community.congregations.find(({ id }) => id === selectedCongregation)?.name }}</small></span>
           </div>
           <nav class="community-org-branches" aria-label="Áreas de la comunidad" role="tablist">
-            <button v-for="area in communityAreas" :key="area.id" class="community-org-branch" :class="{ active: selectedCommunityArea === area.id }" type="button" role="tab" :aria-selected="selectedCommunityArea === area.id" @click="selectedCommunityArea = area.id">
-              <span class="community-org-branch-label">{{ area.label }}</span><strong>{{ area.count }}</strong>
+            <button v-for="area in communityAreas" :id="`community-area-tab-${area.id}`" :key="area.id" class="community-org-branch" :class="{ active: selectedCommunityArea === area.id }" type="button" role="tab" aria-controls="community-area-panel" :aria-selected="selectedCommunityArea === area.id" @click="selectedCommunityArea = area.id">
+              <span class="community-org-branch-copy"><span class="community-org-branch-label">{{ area.label }}</span><small>{{ area.description }}</small></span><strong>{{ area.count }}</strong>
             </button>
           </nav>
         </div>
-        <div v-if="visibleCommunityAreaSections.length" class="community-area-groups">
-          <section v-for="section in visibleCommunityAreaSections" :key="section.id" class="community-area-group">
-            <header><div><p class="community-eyebrow">ÁREA</p><h3>{{ section.label }}</h3></div><span>{{ section.count }}</span></header>
-            <div class="community-area-org-groups">
-              <div v-for="organizationGroup in section.organizationGroups" :key="`${section.id}-${organizationGroup.name}`" class="community-area-org-group">
-                <div class="community-area-org-group-header">
-                  <span class="community-area-org-group-badge"><MapPinIcon aria-hidden="true" /></span>
-                  <strong>{{ organizationGroup.name }}</strong>
-                  <small>{{ organizationGroup.items.length }} {{ organizationGroup.items.length === 1 ? 'dato' : 'datos' }}</small>
-                </div>
-                <div class="community-area-entries">
-                  <article v-for="entry in organizationGroup.items" :key="entry.id" class="community-area-entry">
-                    <div class="community-update-meta">
-                      <span>{{ section.id === 'events' ? 'Encuentro' : section.id === 'posts' ? (entry.type === 'activity' ? 'Actividad' : 'Publicación') : section.id === 'locations' ? 'Sede' : 'Compartido públicamente' }}</span>
-                      <time v-if="entry.date" :datetime="entry.date">{{ formatDate(entry.date, { year: 'numeric' }) }}</time>
-                    </div>
-                    <h4>{{ entry.title }}</h4>
-                    <p v-if="entry.description">{{ entry.description }}</p>
-                    <p v-if="entry.detail" class="community-update-detail">{{ entry.detail }}</p>
-                    <span class="community-update-congregation"><MapPinIcon aria-hidden="true" />{{ entry.congregation || entry.name }}</span>
-                  </article>
+
+        <div class="community-area-dashboard-toolbar">
+          <div class="community-area-summary-strip" aria-label="Resumen del tablero">
+            <span><strong>{{ community.congregations.length }}</strong> sedes</span>
+            <span><strong>{{ visibleCommunityAreaSections.reduce((total, section) => total + section.count, 0) }}</strong> registros</span>
+            <span><strong>{{ communityAreas.filter(({ id }) => id !== 'all').reduce((total, area) => total + area.count, 0) }}</strong> módulos activos</span>
+          </div>
+          <div class="community-area-filters">
+            <label class="community-area-search" aria-label="Buscar registros">
+              <span>Buscar</span>
+              <input v-model="areaSearchQuery" type="search" placeholder="Título, módulo, congregación..." />
+            </label>
+            <label class="community-area-order" aria-label="Orden de resultados">
+              <span>Orden</span>
+              <select value="recent">
+                <option value="recent">Más recientes</option>
+                <option value="congregation">Por congregación</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div id="community-area-panel" class="community-area-panel" role="tabpanel" tabindex="0" :aria-labelledby="`community-area-tab-${selectedCommunityArea}`">
+          <div v-if="visibleCommunityAreaSections.length" class="community-area-groups">
+            <section v-for="section in visibleCommunityAreaSections" :key="section.id" class="community-area-group" :class="`community-area-group-${section.id}`">
+              <header class="community-area-group-heading">
+                <span class="community-area-heading-icon"><component :is="areaIcon(section.id)" aria-hidden="true" /></span>
+                <div><p class="community-eyebrow">{{ communityAreas.find(({ id }) => id === section.id)?.description }}</p><h3>{{ section.label }}</h3></div>
+                <span class="community-area-count">{{ section.count }} <small>{{ section.count === 1 ? 'registro' : 'registros' }}</small></span>
+              </header>
+              <div v-if="section.count" class="community-area-org-groups">
+                <div v-for="organizationGroup in section.organizationGroups" :key="`${section.id}-${organizationGroup.name}`" class="community-area-org-group">
+                  <div class="community-area-org-group-header">
+                    <span class="community-area-org-group-badge"><BuildingLibraryIcon aria-hidden="true" /></span>
+                    <div class="community-area-org-group-copy"><strong>{{ organizationGroup.name }}</strong><small>{{ organizationGroup.items.length }} {{ organizationGroup.items.length === 1 ? 'registro en esta área' : 'registros en esta área' }}</small></div>
+                  </div>
+                  <div class="community-area-entries community-area-slider" aria-label="Slider de registros del módulo">
+                    <details v-for="entry in organizationGroup.items" :key="entry.id" class="community-area-entry community-area-slide-card">
+                      <summary>
+                        <span class="community-area-entry-icon"><component :is="areaIcon(section.id)" aria-hidden="true" /></span>
+                        <div class="community-area-entry-content">
+                          <div class="community-update-meta">
+                            <span>{{ areaRecordType(section.id, entry) }}</span>
+                            <span v-if="entry.synthetic" class="community-synthetic-badge">SINTÉTICO · PRIVADO</span>
+                            <span v-if="entry.status" class="community-area-status">{{ entry.status }}</span>
+                            <time v-if="entry.date" :datetime="entry.date">{{ formatDate(entry.date, { year: 'numeric' }) }}</time>
+                          </div>
+                          <h4>{{ entry.title }}</h4>
+                          <p v-if="entry.description" class="community-area-entry-preview">{{ entry.description }}</p>
+                          <span class="community-update-congregation"><MapPinIcon aria-hidden="true" />{{ entry.congregation || entry.name }}</span>
+                        </div>
+                      </summary>
+                      <div class="community-area-entry-detail">
+                        <p v-if="entry.description">{{ entry.description }}</p>
+                        <p v-if="entry.detail" class="community-update-detail">{{ entry.detail }}</p>
+                        <p v-if="entry.startsAt && entry.endsAt" class="community-area-entry-time">Termina {{ formatEventTime(entry.endsAt) }}</p>
+                      </div>
+                    </details>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
-        </div>
-        <div v-else class="community-empty community-updates-empty">
-          <UsersIcon aria-hidden="true" />
-          <p>{{ selectedCommunityArea === 'all' ? 'Todavía no hay información pública para estas áreas.' : `No hay contenido público en el área ${communityAreas.find(({ id }) => id === selectedCommunityArea)?.label || ''}.` }}</p>
+              <div v-else class="community-empty community-area-no-records">
+                <UsersIcon aria-hidden="true" />
+                <p>No hay registros públicos en esta área.</p>
+                <RouterLink class="community-area-empty-action" :to="managementRoute">{{ managementLabel }} <ArrowRightIcon aria-hidden="true" /></RouterLink>
+              </div>
+            </section>
+          </div>
+          <div v-else class="community-empty community-updates-empty">
+            <UsersIcon aria-hidden="true" />
+            <p>{{ selectedCommunityArea === 'all' ? 'Todavía no hay información pública para estas áreas.' : `No hay contenido público en el área ${communityAreas.find(({ id }) => id === selectedCommunityArea)?.label || ''}.` }}</p>
+            <RouterLink class="community-area-empty-action" :to="managementRoute">{{ managementLabel }} <ArrowRightIcon aria-hidden="true" /></RouterLink>
+          </div>
         </div>
       </section>
+
+      <ScrollAdSlot :ads="liveAds" placement="community" :slot-index="1" :slot-count="3" :slot-seed="1" />
+
+      <ScrollAdSlot :ads="liveAds" placement="content" :slot-index="1" :slot-count="3" :slot-seed="3" />
 
       <section id="historias" class="community-section community-stories-section">
         <div class="community-section-heading community-stories-heading">
@@ -762,6 +855,10 @@ onBeforeUnmount(() => publicMap?.remove())
           <p>No hay publicaciones para estos filtros.</p>
         </div>
       </section>
+
+      <ScrollAdSlot :ads="liveAds" placement="community" :slot-index="2" :slot-count="3" :slot-seed="2" />
+
+      <ScrollAdSlot :ads="liveAds" placement="content" :slot-index="2" :slot-count="3" :slot-seed="5" />
     </main>
 
     <footer class="community-footer">
