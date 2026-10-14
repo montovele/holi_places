@@ -18,6 +18,9 @@ import plansRouter from './routes/plans.routes.js'
 import publicPlansRouter from './routes/public-plans.routes.js'
 import appearanceRouter from './routes/appearance.routes.js'
 import adminAppearanceRouter from './routes/admin-appearance.routes.js'
+import adsRouter from './routes/ads.routes.js'
+import publicAdsRouter from './routes/public-ads.routes.js'
+import tenantAdsRouter from './routes/tenant-ads.routes.js'
 import { stripeWebhook } from './controllers/billing.controller.js'
 
 const app = express()
@@ -26,7 +29,7 @@ app.use(helmet())
 app.use(cors({
   origin: [
     process.env.FRONTEND_ORIGIN || 'http://localhost:5188',
-    /^http:\/\/(localhost|127\.0\.0\.1):51(7[3-9]|8[0-9])$/,
+    /^http:\/\/(localhost|127\.0\.0\.1):51(?:7[3-9]|8[0-9]|9[0-9])$/,
   ],
   credentials: true,
 }))
@@ -37,6 +40,8 @@ app.use('/api/health', healthRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/public/registrations', registrationRouter)
 app.use('/api/public/community', communityRouter)
+app.use('/api/public/ads', publicAdsRouter)
+app.use('/api/public/media', publicAdsRouter)
 app.use('/api/public/appearance', appearanceRouter)
 app.use('/api/public/plans', publicPlansRouter)
 const requireAuthenticated = createAuthMiddleware(database)
@@ -44,6 +49,8 @@ const requirePaidSubscription = createActiveSubscriptionMiddleware(database)
 app.use('/api/admin/organizations', requireAuthenticated, organizationsRouter)
 app.use('/api/admin/users', requireAuthenticated, usersRouter)
 app.use('/api/admin/saas/plans', requireAuthenticated, plansRouter)
+app.use('/api/admin/ads', requireAuthenticated, adsRouter)
+app.use('/api/tenant/ads', requireAuthenticated, tenantAdsRouter)
 app.use('/api/admin/appearance', requireAuthenticated, adminAppearanceRouter)
 app.use('/api/billing', requireAuthenticated, billingRouter)
 app.use('/api/dashboard', requireAuthenticated, dashboardRouter)

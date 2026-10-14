@@ -74,7 +74,7 @@ export function requireSameOrigin(request, response, next) {
 
   const configuredOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:5188'
   const allowed = origin === configuredOrigin
-    || /^http:\/\/(localhost|127\.0\.0\.1):51(7[3-9]|8[0-9])$/.test(origin)
+    || /^http:\/\/(localhost|127\.0\.0\.1):51(?:7[3-9]|8[0-9]|9[0-9])$/.test(origin)
   if (!allowed) {
     return response.status(403).json({ error: { code: 'INVALID_ORIGIN', message: 'Origen de solicitud no permitido.' } })
   }

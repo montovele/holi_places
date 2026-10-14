@@ -205,6 +205,43 @@ export async function createCheckoutSession(database, subscriptionId, details = 
   return { url: checkout.url, planId: plan?.planCode || null, checkoutSessionId: checkout.id }
 }
 
+export async function createAdCheckoutSession(details = {}, stripeClientOverride = null) {
+  assertStripeSecret()
+  const stripeApi = stripeClientOverride || stripe()
+  const baseUrl = process.env.FRONTEND_ORIGIN || 'http://localhost:5188'
+  const checkout = await stripeApi.checkout.sessions.create({
+    mode: 'payment',
+    line_items: [{
+      price_data: {
+        currency: details.currency.toLowerCase(),
+        unit_amount: details.amountMinor,
+        product_data: {
+          name: `Publicidad · ${details.days} días`,
+          description: `Difusión de campaña ${details.campaignId} para la congregación.`,
+        },
+      },
+      quantity: 1,
+    }],
+    customer_email: details.email,
+    client_reference_id: details.orderId,
+    metadata: {
+      adOrderId: details.orderId,
+      campaignId: details.campaignId,
+      organizationId: details.organizationId,
+      days: String(details.days),
+    },
+    success_url: `${baseUrl}/my-ads?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/my-ads?checkout=cancelled`,
+  })
+  return { id: checkout.id, url: checkout.url }
+}
+
+export async function retrieveAdCheckoutSession(sessionId, stripeClientOverride = null) {
+  assertStripeSecret()
+  const stripeApi = stripeClientOverride || stripe()
+  return stripeApi.checkout.sessions.retrieve(sessionId)
+}
+
 export async function getOrganizationSubscription(database, organizationId, stripeClientOverride = null) {
   if (!organizationId) return { status: 'not_registered', activeModules: [] }
   const [subscriptions] = await database.execute(`
@@ -343,7 +380,16 @@ export async function processStripeWebhook(database, rawBody, signature) {
   let invoiceObject = null
   let internalSubscriptionId = null
   let stripeSubscriptionId = null
-  if (event.type === 'checkout.session.completed') {
+  const checkoutSession = event.data.object
+  const adPaymentEvent = [
+    'checkout.session.completed',
+    'checkout.session.async_payment_succeeded',
+    'checkout.session.async_payment_failed',
+    'checkout.session.expired',
+  ].includes(event.type) && checkoutSession.mode === 'payment' && checkoutSession.metadata?.adOrderId
+  if (adPaymentEvent) {
+    // Ad purchases are activated in the same transaction as webhook de-duplication below.
+  } else if (event.type === 'checkout.session.completed' && checkoutSession.mode === 'subscription') {
     const session = event.data.object
     internalSubscriptionId = session.metadata?.subscriptionId || session.client_reference_id
     stripeSubscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id
@@ -363,6 +409,24 @@ export async function processStripeWebhook(database, rawBody, signature) {
   const connection = await database.getConnection()
   try {
     await connection.beginTransaction()
+    let paidAdOrder = null
+    if (adPaymentEvent && event.data.object.payment_status === 'paid') {
+      const session = event.data.object
+      const [orders] = await connection.execute(`
+        SELECT id, campaign_id AS campaignId, organization_id AS organizationId,
+          days_purchased AS daysPurchased, amount_minor AS amountMinor, currency, status
+        FROM ad_purchase_orders
+        WHERE id = ? AND organization_id = ? AND (stripe_checkout_session_id IS NULL OR stripe_checkout_session_id = ?)
+        LIMIT 1 FOR UPDATE
+      `, [session.metadata.adOrderId, session.metadata.organizationId, session.id])
+      paidAdOrder = orders[0]
+      if (!paidAdOrder) invalid('La orden de publicidad asociada al pago no existe.', 404)
+      if (['pending', 'retrying'].includes(paidAdOrder.status)
+        && (Number(session.amount_total) !== Number(paidAdOrder.amountMinor)
+          || String(session.currency).toUpperCase() !== paidAdOrder.currency)) {
+        invalid('El importe confirmado por Stripe no coincide con la orden de publicidad.', 409)
+      }
+    }
     const [insertResult] = await connection.execute(
       'INSERT IGNORE INTO billing_webhook_events (id, event_type) VALUES (?, ?)',
       [event.id, event.type],
@@ -370,6 +434,37 @@ export async function processStripeWebhook(database, rawBody, signature) {
     if (!insertResult.affectedRows) {
       await connection.commit()
       return { received: true, duplicate: true }
+    }
+
+    if (adPaymentEvent) {
+      const session = event.data.object
+      const orderId = session.metadata.adOrderId
+      const organizationId = session.metadata.organizationId
+      if (['checkout.session.async_payment_failed', 'checkout.session.expired'].includes(event.type)) {
+        await connection.execute(`
+          UPDATE ad_purchase_orders SET status = ?
+          WHERE id = ? AND organization_id = ?
+            AND (stripe_checkout_session_id IS NULL OR stripe_checkout_session_id = ?) AND status = 'pending'
+        `, [event.type === 'checkout.session.expired' ? 'expired' : 'failed', orderId, organizationId, session.id])
+      } else if (session.payment_status === 'paid') {
+        const order = paidAdOrder
+        if (['pending', 'retrying'].includes(order.status)) {
+          await connection.execute(`
+            UPDATE ad_purchase_orders SET status = 'paid', stripe_checkout_session_id = ?,
+              stripe_payment_intent_id = ?, paid_at = UTC_TIMESTAMP()
+            WHERE id = ? AND organization_id = ? AND status IN ('pending', 'retrying')
+              AND (stripe_checkout_session_id IS NULL OR stripe_checkout_session_id = ?)
+          `, [session.id, typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || null,
+            order.id, order.organizationId, session.id])
+          await connection.execute(`
+            UPDATE brand_ads SET starts_at = COALESCE(starts_at, UTC_TIMESTAMP()),
+              ends_at = DATE_ADD(GREATEST(COALESCE(ends_at, UTC_TIMESTAMP()), UTC_TIMESTAMP()), INTERVAL ? DAY),
+              purchased_days = purchased_days + ?,
+              status = CASE WHEN status IN ('paused', 'archived') THEN status ELSE 'active' END
+            WHERE id = ? AND organization_id = ?
+          `, [order.daysPurchased, order.daysPurchased, order.campaignId, order.organizationId])
+        }
+      }
     }
 
     if (event.type === 'checkout.session.completed' && internalSubscriptionId) {

@@ -1,0 +1,2595 @@
+{
+  "schemaVersion": 1,
+  "datasetType": "synthetic-fixture",
+  "synthetic": true,
+  "visibility": "private",
+  "public": false,
+  "generatedAt": "2026-10-13T23:36:19.453Z",
+  "referenceDate": "2026-10-13",
+  "sourceCsv": "C:\\Users\\Anderson\\Documents\\holi_places\\congregaciones_religiosas_tijuana.csv",
+  "notice": "Registros generados para pruebas. No importar en producción ni presentar como información real.",
+  "modules": [
+    "events",
+    "reservations",
+    "members",
+    "groups",
+    "attendance",
+    "locations",
+    "resources",
+    "communications",
+    "reports",
+    "subscription",
+    "settings"
+  ],
+  "billingDataGenerated": false,
+  "congregations": [
+    {
+      "id": "directory-ea4d9f9a85c0bc0b99b6e892fa7bb7ba",
+      "name": "PARROQUIA SAN MIGUEL ARCANGEL",
+      "type": "Iglesia católica",
+      "address": "Av. de la Luz 4827",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 4.6,
+      "reviewCount": 394,
+      "latitude": 32.5016878,
+      "longitude": -116.98367,
+      "mapsUrl": "https://www.google.com/maps/place/PARROQUIA+SAN+MIGUEL+ARCANGEL/data=!4m7!3m6!1s0x80d93801b75f1753:0xf3def7c39781e02c!8m2!3d32.5016878!4d-116.98367!16s%2Fg%2F1tfjq_5k",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-cb2c3e269bac33570b4b0f81baf3e473",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-18T18:00:00.000Z",
+            "endsAt": "2026-10-18T19:30:00.000Z",
+            "locationId": "directory-location-ea4d9f9a85c0bc0b99b6e892fa7bb7ba"
+          },
+          {
+            "id": "synthetic-317471eec711e6f2b5bee2b254c82279",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-25T10:00:00.000Z",
+            "endsAt": "2026-10-25T12:00:00.000Z",
+            "locationId": "directory-location-ea4d9f9a85c0bc0b99b6e892fa7bb7ba"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-488566f2bf12f1635a87dc491836f330",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "PARROQUIA SAN MIGUEL ARCANGEL",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-18T18:00:00.000Z",
+            "endsAt": "2026-10-18T19:30:00.000Z",
+            "locationId": "directory-location-ea4d9f9a85c0bc0b99b6e892fa7bb7ba"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-1e97d94ad8736d5f34bd393ced6e41e3",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-f55e84615e8cd72c162459d7d5a80de1@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-8f6d36e00af267aa9353f639f5f175d1",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-f55e84615e8cd72c162459d7d5a80de1@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-84a8c5e46a8f7fc84aee819b2fe9f619",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-f55e84615e8cd72c162459d7d5a80de1@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-bac9ebfc1b0568e41a8f6ee802d7455d",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Grupo de bienvenida",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-95a1f550c50f42d72ac69d06950cee82",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "12 participantes sintéticos",
+            "attendeeCount": 12,
+            "eventId": "synthetic-cb2c3e269bac33570b4b0f81baf3e473",
+            "recordDate": "2026-10-11"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-ea4d9f9a85c0bc0b99b6e892fa7bb7ba",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "PARROQUIA SAN MIGUEL ARCANGEL",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia católica · Av. de la Luz 4827 · Tijuana",
+            "detail": "32.5016878, -116.98367",
+            "latitude": 32.5016878,
+            "longitude": -116.98367,
+            "address": "Av. de la Luz 4827",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/PARROQUIA+SAN+MIGUEL+ARCANGEL/data=!4m7!3m6!1s0x80d93801b75f1753:0xf3def7c39781e02c!8m2!3d32.5016878!4d-116.98367!16s%2Fg%2F1tfjq_5k",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-04f6b9577ea8f354de655d86612ea861",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 20 sillas",
+            "quantity": 20,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-becdb98f0ce5db004ce95ecc0b6b87ba",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-28fdafb2b74abac0a8c404b2fa000ba4",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 12 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-acfdf884ff0e26ade153e47c7f8e33f7",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-691dead2e9c455ce277996ff1985ae99",
+      "name": "Parroquia Maria Madre de Dios",
+      "type": "Iglesia católica",
+      "address": "Blvd. de Las Americas 5317",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 4.8,
+      "reviewCount": 160,
+      "latitude": 32.5063893,
+      "longitude": -116.9870231,
+      "mapsUrl": "https://www.google.com/maps/place/Parroquia+Maria+Madre+de+Dios/data=!4m7!3m6!1s0x80d948005f095861:0xba512de2560d69a9!8m2!3d32.5063893!4d-116.9870231!16s%2Fg%2F1vfwd42m",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-b32620a3c64af096396ac74842ed2cd3",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-19T18:00:00.000Z",
+            "endsAt": "2026-10-19T19:30:00.000Z",
+            "locationId": "directory-location-691dead2e9c455ce277996ff1985ae99"
+          },
+          {
+            "id": "synthetic-b1148f3aba260432d5cb8a1aba28544e",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-26T10:00:00.000Z",
+            "endsAt": "2026-10-26T12:00:00.000Z",
+            "locationId": "directory-location-691dead2e9c455ce277996ff1985ae99"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-344b100bd52971becc7c4676df21b6bf",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Parroquia Maria Madre de Dios",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-19T18:00:00.000Z",
+            "endsAt": "2026-10-19T19:30:00.000Z",
+            "locationId": "directory-location-691dead2e9c455ce277996ff1985ae99"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-ee71567137bb06d409ddbcae94f89808",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-3cabec6d01fbd9e06660645061a2c01f@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-99eb2aa190b52dcb7df99c83b035657e",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-3cabec6d01fbd9e06660645061a2c01f@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-d26f65a125d4443ca27ba875984e1a9d",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-3cabec6d01fbd9e06660645061a2c01f@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-74295b75b8e923a7e6947465b50ac2fe",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Círculo de convivencia",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-8e5ee3bea77ce4ad3042e69a38c3670b",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "19 participantes sintéticos",
+            "attendeeCount": 19,
+            "eventId": "synthetic-b32620a3c64af096396ac74842ed2cd3",
+            "recordDate": "2026-10-10"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-691dead2e9c455ce277996ff1985ae99",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Parroquia Maria Madre de Dios",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia católica · Blvd. de Las Americas 5317 · Tijuana",
+            "detail": "32.5063893, -116.9870231",
+            "latitude": 32.5063893,
+            "longitude": -116.9870231,
+            "address": "Blvd. de Las Americas 5317",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Parroquia+Maria+Madre+de+Dios/data=!4m7!3m6!1s0x80d948005f095861:0xba512de2560d69a9!8m2!3d32.5063893!4d-116.9870231!16s%2Fg%2F1vfwd42m",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-91205b3c59eea69969f92b626c142434",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 25 sillas",
+            "quantity": 25,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-1b367417f3d2d06b3189d317099f1fa5",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-c18a2473421a07225dd01ffd90836a8e",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 19 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-1600fa12214f4510b2d342ae44d1b467",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-b244cafd9c6a593ba83b608eb575728f",
+      "name": "Parroquia Divino Rostro de Jesús en Misión",
+      "type": "Parroquia",
+      "address": "Zoto 4",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 4.6,
+      "reviewCount": 141,
+      "latitude": 32.4969315,
+      "longitude": -116.9775523,
+      "mapsUrl": "https://www.google.com/maps/place/Parroquia+Divino+Rostro+de+Jes%C3%BAs+en+Misi%C3%B3n/data=!4m7!3m6!1s0x80d93804c267efdd:0x13a1bf46c707b6dc!8m2!3d32.4969315!4d-116.9775523!16s%2Fg%2F1tg7s9dw",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-615208e3994d03043570bb49e2651bd1",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-20T18:00:00.000Z",
+            "endsAt": "2026-10-20T19:30:00.000Z",
+            "locationId": "directory-location-b244cafd9c6a593ba83b608eb575728f"
+          },
+          {
+            "id": "synthetic-79f0a8d5618b82b187421500421e19a5",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-27T10:00:00.000Z",
+            "endsAt": "2026-10-27T12:00:00.000Z",
+            "locationId": "directory-location-b244cafd9c6a593ba83b608eb575728f"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-f23057e4d926db64d50deb3839fd81d7",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Parroquia Divino Rostro de Jesús en Misión",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-20T18:00:00.000Z",
+            "endsAt": "2026-10-20T19:30:00.000Z",
+            "locationId": "directory-location-b244cafd9c6a593ba83b608eb575728f"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-4a6254666cf92afd9c4a66e11498732a",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-ddf63aceda333a4f245b74823325969e@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-6f372b719e63f490853d69d693d4f7f6",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-ddf63aceda333a4f245b74823325969e@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-f7798c0b768dcd5a74b025b3a815ddf9",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-ddf63aceda333a4f245b74823325969e@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-91688cb8230ccbfe91ddb33214b13f95",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Grupo de bienvenida",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-23d310d007b24858ac9c9d93eca3cce6",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "26 participantes sintéticos",
+            "attendeeCount": 26,
+            "eventId": "synthetic-615208e3994d03043570bb49e2651bd1",
+            "recordDate": "2026-10-09"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-b244cafd9c6a593ba83b608eb575728f",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Parroquia Divino Rostro de Jesús en Misión",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Parroquia · Zoto 4 · Tijuana",
+            "detail": "32.4969315, -116.9775523",
+            "latitude": 32.4969315,
+            "longitude": -116.9775523,
+            "address": "Zoto 4",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Parroquia+Divino+Rostro+de+Jes%C3%BAs+en+Misi%C3%B3n/data=!4m7!3m6!1s0x80d93804c267efdd:0x13a1bf46c707b6dc!8m2!3d32.4969315!4d-116.9775523!16s%2Fg%2F1tg7s9dw",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-b6112a8b10dfe70aaeb98cf6bc7ac661",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 30 sillas",
+            "quantity": 30,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-900d47d15cd38447efb0e34e94049969",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-c7ebadf742a9e79096df22dba5b42afb",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 26 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-290fdf7a26715c77804d5b4ec057ed82",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-c2ee0205d27c10da83586f69eb169efa",
+      "name": "Parroquia Santa María Reina",
+      "type": "Iglesia católica",
+      "address": "C. Colina de Montecarlo 4",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 4.8,
+      "reviewCount": 348,
+      "latitude": 32.4840579,
+      "longitude": -116.99403,
+      "mapsUrl": "https://www.google.com/maps/place/Parroquia+Santa+Mar%C3%ADa+Reina/data=!4m7!3m6!1s0x80d9378af014b815:0xafd662bbb92ed470!8m2!3d32.4840579!4d-116.99403!16s%2Fg%2F1vd3w25r",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-e97b2d8bac286abb7c4aefef48cb02f7",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-21T18:00:00.000Z",
+            "endsAt": "2026-10-21T19:30:00.000Z",
+            "locationId": "directory-location-c2ee0205d27c10da83586f69eb169efa"
+          },
+          {
+            "id": "synthetic-d9f3cdf014b0424e1b5f1ddbceb3392b",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-28T10:00:00.000Z",
+            "endsAt": "2026-10-28T12:00:00.000Z",
+            "locationId": "directory-location-c2ee0205d27c10da83586f69eb169efa"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-51e732da2b909792e01d1bffebf48d64",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Parroquia Santa María Reina",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-21T18:00:00.000Z",
+            "endsAt": "2026-10-21T19:30:00.000Z",
+            "locationId": "directory-location-c2ee0205d27c10da83586f69eb169efa"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-8ea0459ac00c7fd66d501aedb72f7550",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-6885ea670548698f113641a78d3b7fc8@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-29a9f357a12e909d4fa82acbddfd1dfd",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-6885ea670548698f113641a78d3b7fc8@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-3185ec245725c7039d5d642854110756",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-6885ea670548698f113641a78d3b7fc8@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-0b9858ddce54e275d9e7b01550284fa6",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Círculo de convivencia",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-e87cb8d5c423e0bac76e3f2fad3a1784",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "33 participantes sintéticos",
+            "attendeeCount": 33,
+            "eventId": "synthetic-e97b2d8bac286abb7c4aefef48cb02f7",
+            "recordDate": "2026-10-08"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-c2ee0205d27c10da83586f69eb169efa",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Parroquia Santa María Reina",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia católica · C. Colina de Montecarlo 4 · Tijuana",
+            "detail": "32.4840579, -116.99403",
+            "latitude": 32.4840579,
+            "longitude": -116.99403,
+            "address": "C. Colina de Montecarlo 4",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Parroquia+Santa+Mar%C3%ADa+Reina/data=!4m7!3m6!1s0x80d9378af014b815:0xafd662bbb92ed470!8m2!3d32.4840579!4d-116.99403!16s%2Fg%2F1vd3w25r",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-d493b9cad775bcfca08e5ff556bc39e8",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 35 sillas",
+            "quantity": 35,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-bfe80beb51bbd6b96c4d77320815c6ae",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-c12a78590f73dd65b83357c15718f72f",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 33 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-2e0df362198106603463649821fc8016",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-607fb371024333385055d728a42520ca",
+      "name": "Parroquia Santa Cruz del Apostolado",
+      "type": "Iglesia católica",
+      "address": "Av. Sánchez Taboada 9110",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 4.7,
+      "reviewCount": 71,
+      "latitude": 32.4679054,
+      "longitude": -116.9712155,
+      "mapsUrl": "https://www.google.com/maps/place/Parroquia+Santa+Cruz+del+Apostolado/data=!4m7!3m6!1s0x80d93832fc01871b:0xd25a566bb7baa214!8m2!3d32.4679054!4d-116.9712155!16s%2Fg%2F11cndb_123",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-ee2edccb8e0103b7c27a96a0f67cf397",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-18T18:00:00.000Z",
+            "endsAt": "2026-10-18T19:30:00.000Z",
+            "locationId": "directory-location-607fb371024333385055d728a42520ca"
+          },
+          {
+            "id": "synthetic-ad8eb071c945344e9cc25a73a562d9b5",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-29T10:00:00.000Z",
+            "endsAt": "2026-10-29T12:00:00.000Z",
+            "locationId": "directory-location-607fb371024333385055d728a42520ca"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-0a76959aa8aa3513d385143bdfeee566",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Parroquia Santa Cruz del Apostolado",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-18T18:00:00.000Z",
+            "endsAt": "2026-10-18T19:30:00.000Z",
+            "locationId": "directory-location-607fb371024333385055d728a42520ca"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-b739e63e92d5f57716b9d21eab085428",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-fe8833fa1a4dd0ae074c61d8e397d537@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-001bdec0b036457849077232cefe665c",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-fe8833fa1a4dd0ae074c61d8e397d537@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-6631c71af9eb70ef50629b7fa4904967",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-fe8833fa1a4dd0ae074c61d8e397d537@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-795cf8166a202c43ddb87e2848e26e52",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Grupo de bienvenida",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-6368e003337236fbf208e0ca2a936d32",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "16 participantes sintéticos",
+            "attendeeCount": 16,
+            "eventId": "synthetic-ee2edccb8e0103b7c27a96a0f67cf397",
+            "recordDate": "2026-10-07"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-607fb371024333385055d728a42520ca",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Parroquia Santa Cruz del Apostolado",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia católica · Av. Sánchez Taboada 9110 · Tijuana",
+            "detail": "32.4679054, -116.9712155",
+            "latitude": 32.4679054,
+            "longitude": -116.9712155,
+            "address": "Av. Sánchez Taboada 9110",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Parroquia+Santa+Cruz+del+Apostolado/data=!4m7!3m6!1s0x80d93832fc01871b:0xd25a566bb7baa214!8m2!3d32.4679054!4d-116.9712155!16s%2Fg%2F11cndb_123",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-f235bddcf222c4831675c1873d5938f8",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 40 sillas",
+            "quantity": 40,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-a6f43920f9b083c75fa0168fb962b8f9",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-7772a9210a3ab31414f417bb6a6feb7e",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 16 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-912cba9ffaede1d1501fb4ec895d166d",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-8d7fd3543704d8fe9b7b9b466f41f2b9",
+      "name": "Iglesia Cristiana Bíblica Monte Moriah",
+      "type": "Iglesia cristiana",
+      "address": "Romero 4651",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 5,
+      "reviewCount": 14,
+      "latitude": 32.5037965,
+      "longitude": -116.9757427,
+      "mapsUrl": "https://www.google.com/maps/place/Iglesia+Cristiana+B%C3%ADblica+Monte+Moriah/data=!4m7!3m6!1s0x80d93806519dac43:0x148621cfe411b7aa!8m2!3d32.5037965!4d-116.9757427!16s%2Fg%2F11bx55yzsl",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-2026dcca0714d9bba23e12a6008b9261",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-19T18:00:00.000Z",
+            "endsAt": "2026-10-19T19:30:00.000Z",
+            "locationId": "directory-location-8d7fd3543704d8fe9b7b9b466f41f2b9"
+          },
+          {
+            "id": "synthetic-acfecac4380a7556854056f2673e49c2",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-25T10:00:00.000Z",
+            "endsAt": "2026-10-25T12:00:00.000Z",
+            "locationId": "directory-location-8d7fd3543704d8fe9b7b9b466f41f2b9"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-fdf860b73ba55b6fa9334f8ffdcb6998",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Iglesia Cristiana Bíblica Monte Moriah",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-19T18:00:00.000Z",
+            "endsAt": "2026-10-19T19:30:00.000Z",
+            "locationId": "directory-location-8d7fd3543704d8fe9b7b9b466f41f2b9"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-782f8077d07e634cb965e09255ef02b9",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-3ff3c051911fcdc0ed83b060d5e7d153@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-be51ecc1a3340fd3054e09ff0f09f007",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-3ff3c051911fcdc0ed83b060d5e7d153@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-3a40508a73b29f305ace5e219a606d17",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-3ff3c051911fcdc0ed83b060d5e7d153@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-83393745dd7fdc473ec5353d81924861",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Círculo de convivencia",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-84926eceeaf11c164b60fec3ec59ecbb",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "23 participantes sintéticos",
+            "attendeeCount": 23,
+            "eventId": "synthetic-2026dcca0714d9bba23e12a6008b9261",
+            "recordDate": "2026-10-06"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-8d7fd3543704d8fe9b7b9b466f41f2b9",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Iglesia Cristiana Bíblica Monte Moriah",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia cristiana · Romero 4651 · Tijuana",
+            "detail": "32.5037965, -116.9757427",
+            "latitude": 32.5037965,
+            "longitude": -116.9757427,
+            "address": "Romero 4651",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Iglesia+Cristiana+B%C3%ADblica+Monte+Moriah/data=!4m7!3m6!1s0x80d93806519dac43:0x148621cfe411b7aa!8m2!3d32.5037965!4d-116.9757427!16s%2Fg%2F11bx55yzsl",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-8cbce6188e69c247b61b5c7104eb7fcf",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 45 sillas",
+            "quantity": 45,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-30373df9fe18dca69858c50070ae095c",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-9810ba8509591ab78f404ed113ad9d3d",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 23 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-148dccdf34053fbf2cef837e97aff9af",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-369a4e0aa0fab690ec53e0d2786ed796",
+      "name": "Iglesia Todo Por Ti",
+      "type": "Iglesia cristiana",
+      "address": "Av. 20 de Noviembre 12509",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 5,
+      "reviewCount": 27,
+      "latitude": 32.5113719,
+      "longitude": -116.991997,
+      "mapsUrl": "https://www.google.com/maps/place/Iglesia+Todo+Por+Ti/data=!4m7!3m6!1s0x80d94805c4cd5997:0x533c976d0fa6fb38!8m2!3d32.5113719!4d-116.991997!16s%2Fg%2F1pp2twg_t",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-af65be04cf0229abdce38e552414f60c",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-20T18:00:00.000Z",
+            "endsAt": "2026-10-20T19:30:00.000Z",
+            "locationId": "directory-location-369a4e0aa0fab690ec53e0d2786ed796"
+          },
+          {
+            "id": "synthetic-824746773e97c92544d1ea1167237e69",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-26T10:00:00.000Z",
+            "endsAt": "2026-10-26T12:00:00.000Z",
+            "locationId": "directory-location-369a4e0aa0fab690ec53e0d2786ed796"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-a843263c93a92d766870a397e6ea96b0",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Iglesia Todo Por Ti",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-20T18:00:00.000Z",
+            "endsAt": "2026-10-20T19:30:00.000Z",
+            "locationId": "directory-location-369a4e0aa0fab690ec53e0d2786ed796"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-4c25a5b91c4765e9dcf640272537bf65",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-e28fba454c19d05b33c4ccdcd62feaeb@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-e158b1cab9edbabb4b96b315e3804c42",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-e28fba454c19d05b33c4ccdcd62feaeb@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-530a520526e60ad5e1a8a143d2329477",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-e28fba454c19d05b33c4ccdcd62feaeb@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-fbe0f119aeb81304926d19747f1c9199",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Grupo de bienvenida",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-1d083c9611f0e289c6add50b8bdcaf86",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "30 participantes sintéticos",
+            "attendeeCount": 30,
+            "eventId": "synthetic-af65be04cf0229abdce38e552414f60c",
+            "recordDate": "2026-10-11"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-369a4e0aa0fab690ec53e0d2786ed796",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Iglesia Todo Por Ti",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia cristiana · Av. 20 de Noviembre 12509 · Tijuana",
+            "detail": "32.5113719, -116.991997",
+            "latitude": 32.5113719,
+            "longitude": -116.991997,
+            "address": "Av. 20 de Noviembre 12509",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Iglesia+Todo+Por+Ti/data=!4m7!3m6!1s0x80d94805c4cd5997:0x533c976d0fa6fb38!8m2!3d32.5113719!4d-116.991997!16s%2Fg%2F1pp2twg_t",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-b01fb531d2a838dc33ba099f70f0aadb",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 20 sillas",
+            "quantity": 20,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-e4c5d7ff0b21550ac9a824df36415b81",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-771978d224956efa097edcfeb853c271",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 30 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-72f9d706da044298c7c79ff2002e2cb1",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-bdd4a3f7ae2e1d936cba2e5aee00937a",
+      "name": "La Roca Tijuana",
+      "type": "Iglesia cristiana",
+      "address": "Blvrd. Gral. Rodolfo Sánchez Taboada 10521-C",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 4.8,
+      "reviewCount": 145,
+      "latitude": 32.5173097,
+      "longitude": -117.0112684,
+      "mapsUrl": "https://www.google.com/maps/place/La+Roca+Tijuana/data=!4m7!3m6!1s0x80d9483f8bf6c5c9:0xedd75c9463839b40!8m2!3d32.5173097!4d-117.0112684!16s%2Fg%2F11dxl2bf95",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-c23fc623073eb150c62d5ca2fce9644e",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-21T18:00:00.000Z",
+            "endsAt": "2026-10-21T19:30:00.000Z",
+            "locationId": "directory-location-bdd4a3f7ae2e1d936cba2e5aee00937a"
+          },
+          {
+            "id": "synthetic-5974803f4066e56336e0147b4d48a252",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-27T10:00:00.000Z",
+            "endsAt": "2026-10-27T12:00:00.000Z",
+            "locationId": "directory-location-bdd4a3f7ae2e1d936cba2e5aee00937a"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-6a942157a1a3bcc137053081afd616cb",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "La Roca Tijuana",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-21T18:00:00.000Z",
+            "endsAt": "2026-10-21T19:30:00.000Z",
+            "locationId": "directory-location-bdd4a3f7ae2e1d936cba2e5aee00937a"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-fd4205fed5695a870f186f9793c6f219",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-5777ab3a90bd79a6830c15861346b3ee@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-9b8cb389ca804cb406b1f9e36f1c9b49",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-5777ab3a90bd79a6830c15861346b3ee@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-e661668c0543db466ad229f4d9d9b215",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-5777ab3a90bd79a6830c15861346b3ee@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-d385c780befc9bbb695b403d6f8e5bba",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Círculo de convivencia",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-4eccba2716618f522b8327a8114200ce",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "13 participantes sintéticos",
+            "attendeeCount": 13,
+            "eventId": "synthetic-c23fc623073eb150c62d5ca2fce9644e",
+            "recordDate": "2026-10-10"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-bdd4a3f7ae2e1d936cba2e5aee00937a",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "La Roca Tijuana",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia cristiana · Blvrd. Gral. Rodolfo Sánchez Taboada 10521-C · Tijuana",
+            "detail": "32.5173097, -117.0112684",
+            "latitude": 32.5173097,
+            "longitude": -117.0112684,
+            "address": "Blvrd. Gral. Rodolfo Sánchez Taboada 10521-C",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/La+Roca+Tijuana/data=!4m7!3m6!1s0x80d9483f8bf6c5c9:0xedd75c9463839b40!8m2!3d32.5173097!4d-117.0112684!16s%2Fg%2F11dxl2bf95",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-eff406e6b3249aa1debdf6f207f4bbfa",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 25 sillas",
+            "quantity": 25,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-8ff19387a602244d022bb459a545a07f",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-e5490af011398b81ca5a5611b5ed926a",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 13 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-99ed4908cea7bec2c73a6e4dc0acfe9a",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-14ebd8246ac35b43f93acbe6a8849c3a",
+      "name": "Comunidad Tijuana",
+      "type": "Iglesia cristiana",
+      "address": "Sta. Anita 4364",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 4.8,
+      "reviewCount": 17,
+      "latitude": 32.5049873,
+      "longitude": -116.9796798,
+      "mapsUrl": "https://www.google.com/maps/place/Comunidad+Tijuana/data=!4m7!3m6!1s0x80d93800adf805c1:0x5002aa2b4bf71f8b!8m2!3d32.5049873!4d-116.9796798!16s%2Fg%2F11df0qm7gt",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-554e6e4dc0509216b7711cb358998f36",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-18T18:00:00.000Z",
+            "endsAt": "2026-10-18T19:30:00.000Z",
+            "locationId": "directory-location-14ebd8246ac35b43f93acbe6a8849c3a"
+          },
+          {
+            "id": "synthetic-6f3c543de819535e70a1382c664508ad",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-28T10:00:00.000Z",
+            "endsAt": "2026-10-28T12:00:00.000Z",
+            "locationId": "directory-location-14ebd8246ac35b43f93acbe6a8849c3a"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-23dff7d52c753e5457499d70cdc0a044",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Comunidad Tijuana",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-18T18:00:00.000Z",
+            "endsAt": "2026-10-18T19:30:00.000Z",
+            "locationId": "directory-location-14ebd8246ac35b43f93acbe6a8849c3a"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-3c8603fdf34858d6eda41845e40c8794",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-448d8d7ed98aa2c95b85f7d969a07f61@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-9b191109d09e7fa2913215b10937a6e8",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-448d8d7ed98aa2c95b85f7d969a07f61@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-c849687d4bb2bdb240640341fdadab53",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-448d8d7ed98aa2c95b85f7d969a07f61@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-e6beefaf2369712cb1503bf61d3714d7",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Grupo de bienvenida",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-c465067586a520cb9c1fffbada00016c",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "20 participantes sintéticos",
+            "attendeeCount": 20,
+            "eventId": "synthetic-554e6e4dc0509216b7711cb358998f36",
+            "recordDate": "2026-10-09"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-14ebd8246ac35b43f93acbe6a8849c3a",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Comunidad Tijuana",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia cristiana · Sta. Anita 4364 · Tijuana",
+            "detail": "32.5049873, -116.9796798",
+            "latitude": 32.5049873,
+            "longitude": -116.9796798,
+            "address": "Sta. Anita 4364",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Comunidad+Tijuana/data=!4m7!3m6!1s0x80d93800adf805c1:0x5002aa2b4bf71f8b!8m2!3d32.5049873!4d-116.9796798!16s%2Fg%2F11df0qm7gt",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-5c75e5edd825899e04c71044f0d8adb3",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 30 sillas",
+            "quantity": 30,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-e904e245a66cdb1d33e29343c583fb07",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-2195adb28444932ca348710bf425257d",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 20 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-dfcef35eda73f159600373c80e09e868",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-03c46613dd3e2ea6226d5f518e8b9cfe",
+      "name": "Iglesia Cristiana Casa de Mi Padre",
+      "type": "Iglesia cristiana",
+      "address": "",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 4.5,
+      "reviewCount": 11,
+      "latitude": 32.4640749,
+      "longitude": -116.9960016,
+      "mapsUrl": "https://www.google.com/maps/place/Iglesia+Cristiana+Casa+de+Mi+Padre/data=!4m7!3m6!1s0x80d9378346e710d1:0x6f6b4f10b3f3bf36!8m2!3d32.4640749!4d-116.9960016!16s%2Fg%2F11gglr_j_c",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-a4e6e2f48e5e58d73a583bb8e618e70e",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-19T18:00:00.000Z",
+            "endsAt": "2026-10-19T19:30:00.000Z",
+            "locationId": "directory-location-03c46613dd3e2ea6226d5f518e8b9cfe"
+          },
+          {
+            "id": "synthetic-c6518dc9bb6034f4cffa96dac304bed7",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-29T10:00:00.000Z",
+            "endsAt": "2026-10-29T12:00:00.000Z",
+            "locationId": "directory-location-03c46613dd3e2ea6226d5f518e8b9cfe"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-eceb7e91a5de5f64ad46bd6c492c6fc4",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Iglesia Cristiana Casa de Mi Padre",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-19T18:00:00.000Z",
+            "endsAt": "2026-10-19T19:30:00.000Z",
+            "locationId": "directory-location-03c46613dd3e2ea6226d5f518e8b9cfe"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-c811deab7e1dfbed1b24a3e02d3c3ec5",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-d1ffc0ca360ba7b007f20a2dad93494c@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-2c833f1b60e17355f63ebef5232072ba",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-d1ffc0ca360ba7b007f20a2dad93494c@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-b56b67b28ca64975c99e72b7aa4e7367",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-d1ffc0ca360ba7b007f20a2dad93494c@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-0d801701c1ceb6f106c44a9300d62087",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Círculo de convivencia",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-27d546f0c1b75ad66c10897a9d7084bc",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "27 participantes sintéticos",
+            "attendeeCount": 27,
+            "eventId": "synthetic-a4e6e2f48e5e58d73a583bb8e618e70e",
+            "recordDate": "2026-10-08"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-03c46613dd3e2ea6226d5f518e8b9cfe",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Iglesia Cristiana Casa de Mi Padre",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia cristiana · Tijuana",
+            "detail": "32.4640749, -116.9960016",
+            "latitude": 32.4640749,
+            "longitude": -116.9960016,
+            "address": "",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Iglesia+Cristiana+Casa+de+Mi+Padre/data=!4m7!3m6!1s0x80d9378346e710d1:0x6f6b4f10b3f3bf36!8m2!3d32.4640749!4d-116.9960016!16s%2Fg%2F11gglr_j_c",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-895c0b2c2ee366c388727737586f5ff5",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 35 sillas",
+            "quantity": 35,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-ae720b92b80d4a33ef1de92f9cc059ec",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-c556907572d4793c75b8f0cabf02804f",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 27 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-eaf8b531ff268f82fa1d16eb9ac0e7fb",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-6daedc69467cd68df75620f705db3fd6",
+      "name": "Congregación Apostólica Casa de Oración",
+      "type": "Iglesia cristiana",
+      "address": "C. Priv. Matías Gómez 337",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 3.7,
+      "reviewCount": 3,
+      "latitude": 32.5303947,
+      "longitude": -117.0078994,
+      "mapsUrl": "https://www.google.com/maps/place/Congregaci%C3%B3n+Apost%C3%B3lica+Casa+de+Oraci%C3%B3n/data=!4m7!3m6!1s0x80d9486808f9faa7:0x54879ccf86c90c71!8m2!3d32.5303947!4d-117.0078994!16s%2Fg%2F11csp5l11n",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-6f4d4ed8cdc6e60faed4fc6d51381f5f",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-20T18:00:00.000Z",
+            "endsAt": "2026-10-20T19:30:00.000Z",
+            "locationId": "directory-location-6daedc69467cd68df75620f705db3fd6"
+          },
+          {
+            "id": "synthetic-acd339bd3a79638148adedd163ba078f",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-25T10:00:00.000Z",
+            "endsAt": "2026-10-25T12:00:00.000Z",
+            "locationId": "directory-location-6daedc69467cd68df75620f705db3fd6"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-7ac8bdbc0faa86da60607b7a871ffa47",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Congregación Apostólica Casa de Oración",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-20T18:00:00.000Z",
+            "endsAt": "2026-10-20T19:30:00.000Z",
+            "locationId": "directory-location-6daedc69467cd68df75620f705db3fd6"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-1e2d2ea0c499d3e27146a175eb46ea1b",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-65c1a1868ab81743c70c5bf086e1658d@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-549faf2bf2f2bb5d1f411c0bb618576a",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-65c1a1868ab81743c70c5bf086e1658d@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-9736bcaf203f71161562dc5294584391",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-65c1a1868ab81743c70c5bf086e1658d@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-1807e1933aa236a8704deaebeae53880",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Grupo de bienvenida",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-a3b47e327ec1da1211bb7097c5c53063",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "34 participantes sintéticos",
+            "attendeeCount": 34,
+            "eventId": "synthetic-6f4d4ed8cdc6e60faed4fc6d51381f5f",
+            "recordDate": "2026-10-07"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-6daedc69467cd68df75620f705db3fd6",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Congregación Apostólica Casa de Oración",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia cristiana · C. Priv. Matías Gómez 337 · Tijuana",
+            "detail": "32.5303947, -117.0078994",
+            "latitude": 32.5303947,
+            "longitude": -117.0078994,
+            "address": "C. Priv. Matías Gómez 337",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Congregaci%C3%B3n+Apost%C3%B3lica+Casa+de+Oraci%C3%B3n/data=!4m7!3m6!1s0x80d9486808f9faa7:0x54879ccf86c90c71!8m2!3d32.5303947!4d-117.0078994!16s%2Fg%2F11csp5l11n",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-cf87df7f2d83a45783d2d95b77c2966a",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 40 sillas",
+            "quantity": 40,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-567173efad5845bff39014bc13ca14bd",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-cf5fb9b1464c8bb25b1886a6ad8c178b",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 34 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-aba119267216e1047a9645e6fe27162f",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    },
+    {
+      "id": "directory-4043d18de3be138e9932755341de79c7",
+      "name": "Kayros Comunidad Cristiana Tijuana",
+      "type": "Iglesia cristiana",
+      "address": "C. Bruselas 3738",
+      "city": "Tijuana",
+      "phone": "",
+      "website": "",
+      "rating": 4.9,
+      "reviewCount": 70,
+      "latitude": 32.5010145,
+      "longitude": -117.1193868,
+      "mapsUrl": "https://www.google.com/maps/place/Kayros+Comunidad+Cristiana+Tijuana/data=!4m7!3m6!1s0x80d94a5bf3fc48fd:0x4eb584ddb596360a!8m2!3d32.5010145!4d-117.1193868!16s%2Fg%2F11bw4q42z1",
+      "verifiedAt": "2026-10-13",
+      "syntheticRecords": true,
+      "modules": {
+        "events": [
+          {
+            "id": "synthetic-748020fb59d4e9805afa4490c325478b",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Encuentro comunitario · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Horario ilustrativo generado para validar agenda y presentación; no confirmado por la congregación.",
+            "startsAt": "2026-10-21T18:00:00.000Z",
+            "endsAt": "2026-10-21T19:30:00.000Z",
+            "locationId": "directory-location-4043d18de3be138e9932755341de79c7"
+          },
+          {
+            "id": "synthetic-f80056718f054527e6dc5e706902ec0e",
+            "moduleId": "events",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Actividad comunitaria · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Actividad ilustrativa sin publicación ni convocatoria real.",
+            "startsAt": "2026-10-26T10:00:00.000Z",
+            "endsAt": "2026-10-26T12:00:00.000Z",
+            "locationId": "directory-location-4043d18de3be138e9932755341de79c7"
+          }
+        ],
+        "reservations": [
+          {
+            "id": "synthetic-24c22c6e465adcd38bc28b6a0497b795",
+            "moduleId": "reservations",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Uso de espacio · registro sintético",
+            "status": "Pendiente de confirmación",
+            "description": "Reserva ilustrativa para probar el flujo; no bloquea un espacio real.",
+            "detail": "Kayros Comunidad Cristiana Tijuana",
+            "contactName": "Responsable de prueba",
+            "startsAt": "2026-10-21T18:00:00.000Z",
+            "endsAt": "2026-10-21T19:30:00.000Z",
+            "locationId": "directory-location-4043d18de3be138e9932755341de79c7"
+          }
+        ],
+        "members": [
+          {
+            "id": "synthetic-6817f10e781cbeea6ee6e52e4ee29450",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 01",
+            "firstName": "Participante sintético",
+            "lastName": "01",
+            "email": "persona-1-c5b4615de753faac5b0d727aa39a1b46@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-fc70953b4de5a5f4e5c02f54ec1d8cf9",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 02",
+            "firstName": "Participante sintético",
+            "lastName": "02",
+            "email": "persona-2-c5b4615de753faac5b0d727aa39a1b46@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          },
+          {
+            "id": "synthetic-54079936ef57a2c2d6d4c28c66d766c4",
+            "moduleId": "members",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Participante sintético 03",
+            "firstName": "Participante sintético",
+            "lastName": "03",
+            "email": "persona-3-c5b4615de753faac5b0d727aa39a1b46@example.invalid",
+            "status": "Registro sintético",
+            "description": "Identidad ficticia para pruebas; no representa a una persona real.",
+            "recordDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "synthetic-016f23a92bdd5b85dc39d03e868df84d",
+            "moduleId": "groups",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Círculo de convivencia",
+            "status": "Propuesta sintética",
+            "description": "Grupo ilustrativo para probar el módulo; composición y horario sin confirmar.",
+            "detail": "Sin integrantes ni calendario reales.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "attendance": [
+          {
+            "id": "synthetic-a08306f956e3d7be8b71b9c77e5fd804",
+            "moduleId": "attendance",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Control de asistencia · registro sintético",
+            "status": "Borrador sintético",
+            "description": "Conteo generado para probar filtros e indicadores. No es un dato de asistencia real.",
+            "detail": "17 participantes sintéticos",
+            "attendeeCount": 17,
+            "eventId": "synthetic-748020fb59d4e9805afa4490c325478b",
+            "recordDate": "2026-10-06"
+          }
+        ],
+        "locations": [
+          {
+            "id": "directory-location-4043d18de3be138e9932755341de79c7",
+            "moduleId": "locations",
+            "synthetic": false,
+            "visibility": "private",
+            "public": false,
+            "title": "Kayros Comunidad Cristiana Tijuana",
+            "status": "Ficha importada; confirmar con la organización",
+            "description": "Iglesia cristiana · C. Bruselas 3738 · Tijuana",
+            "detail": "32.5010145, -117.1193868",
+            "latitude": 32.5010145,
+            "longitude": -117.1193868,
+            "address": "C. Bruselas 3738",
+            "city": "Tijuana",
+            "source": "https://www.google.com/maps/place/Kayros+Comunidad+Cristiana+Tijuana/data=!4m7!3m6!1s0x80d94a5bf3fc48fd:0x4eb584ddb596360a!8m2!3d32.5010145!4d-117.1193868!16s%2Fg%2F11bw4q42z1",
+            "verifiedAt": "2026-10-13"
+          }
+        ],
+        "resources": [
+          {
+            "id": "synthetic-f066f4c7b4949eb9b45b923dfa835c33",
+            "moduleId": "resources",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Inventario de mobiliario · registro sintético",
+            "status": "Pendiente de inventario",
+            "description": "Artículo y cantidad ilustrativos; verificar físicamente antes de usar.",
+            "detail": "Cantidad ilustrativa: 45 sillas",
+            "quantity": 45,
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "communications": [
+          {
+            "id": "synthetic-8f4c5b1b3e40b1fa98afeca0a00755bf",
+            "moduleId": "communications",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Aviso comunitario · contenido sintético",
+            "status": "Borrador privado",
+            "description": "Texto generado únicamente para revisar la composición del módulo. No enviar ni publicar.",
+            "detail": "La organización debe redactar y aprobar cualquier aviso real.",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "reports": [
+          {
+            "id": "synthetic-5aac35383da65dba13365917b8f02dd1",
+            "moduleId": "reports",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Resumen de actividad · datos sintéticos",
+            "status": "No validado",
+            "description": "Informe de ejemplo calculado con los registros sintéticos de este conjunto.",
+            "detail": "2 eventos ilustrativos · 17 asistentes sintéticos",
+            "recordDate": "2026-10-13"
+          }
+        ],
+        "subscription": [],
+        "settings": [
+          {
+            "id": "synthetic-8fad4737a0c3b7e39c2a1b6167f67144",
+            "moduleId": "settings",
+            "synthetic": true,
+            "visibility": "private",
+            "public": false,
+            "title": "Horario de reunión · sin confirmar",
+            "status": "Valor sintético; requiere confirmación",
+            "description": "Preferencia generada solo para probar el formulario. No representa el horario de esta congregación.",
+            "detail": "Sábado, 10:00 a 12:00 (ilustrativo)",
+            "recordDate": "2026-10-13"
+          }
+        ]
+      }
+    }
+  ]
+}

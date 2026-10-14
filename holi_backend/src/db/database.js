@@ -78,6 +78,43 @@ const schema = [
     updated_by VARCHAR(64) NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS brand_ads (
+    id VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NULL,
+    brand_name VARCHAR(120) NOT NULL,
+    headline VARCHAR(160) NOT NULL,
+    body TEXT NOT NULL,
+    image_url VARCHAR(1000) NOT NULL DEFAULT '',
+    cta_label VARCHAR(40) NOT NULL DEFAULT 'Conocer más',
+    destination_url VARCHAR(1000) NOT NULL,
+    placement VARCHAR(24) NOT NULL DEFAULT 'community',
+    status VARCHAR(24) NOT NULL DEFAULT 'draft',
+    purchased_days INT UNSIGNED NOT NULL DEFAULT 0,
+    starts_at DATETIME NULL,
+    ends_at DATETIME NULL,
+    created_by VARCHAR(64) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_brand_ads_placement (status, placement, starts_at, ends_at),
+    INDEX idx_brand_ads_organization (organization_id, status, ends_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS ad_purchase_orders (
+    id VARCHAR(64) PRIMARY KEY,
+    campaign_id VARCHAR(64) NOT NULL,
+    organization_id VARCHAR(64) NOT NULL,
+    days_purchased INT UNSIGNED NOT NULL,
+    amount_minor INT UNSIGNED NOT NULL,
+    currency CHAR(3) NOT NULL,
+    status VARCHAR(24) NOT NULL DEFAULT 'pending',
+    stripe_checkout_session_id VARCHAR(255) NULL UNIQUE,
+    stripe_payment_intent_id VARCHAR(255) NULL,
+    paid_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_ad_orders_organization (organization_id, created_at),
+    INDEX idx_ad_orders_campaign (campaign_id, created_at),
+    INDEX idx_ad_orders_status (status, created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(64) PRIMARY KEY,
       record_date VARCHAR(40) NOT NULL DEFAULT '',
@@ -97,6 +134,42 @@ const schema = [
     address VARCHAR(500) NOT NULL,
     latitude DOUBLE NOT NULL DEFAULT 19.4326,
     longitude DOUBLE NOT NULL DEFAULT -99.1332
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS public_congregation_directory (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(120) NOT NULL DEFAULT '',
+    address VARCHAR(500) NOT NULL DEFAULT '',
+    phone VARCHAR(80) NOT NULL DEFAULT '',
+    website VARCHAR(1000) NOT NULL DEFAULT '',
+    rating DECIMAL(2,1) NULL,
+    review_count INT UNSIGNED NULL,
+    latitude DOUBLE NOT NULL,
+    longitude DOUBLE NOT NULL,
+    distance_km DECIMAL(8,2) NULL,
+    search_query VARCHAR(255) NOT NULL DEFAULT '',
+    verified_at DATE NULL,
+    maps_url VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_public_congregation_maps_url (maps_url),
+    INDEX idx_public_congregation_coordinates (latitude, longitude)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS synthetic_module_fixtures (
+    record_id VARCHAR(64) NOT NULL,
+    fixture_id VARCHAR(64) NOT NULL,
+    congregation_id VARCHAR(64) NOT NULL,
+    module_id VARCHAR(64) NOT NULL,
+    synthetic TINYINT(1) NOT NULL DEFAULT 1,
+    visibility VARCHAR(16) NOT NULL DEFAULT 'private',
+    is_public TINYINT(1) NOT NULL DEFAULT 0,
+    record_data JSON NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (record_id),
+    INDEX idx_synthetic_fixture_congregation (fixture_id, congregation_id, module_id),
+    CONSTRAINT fk_synthetic_fixture_congregation FOREIGN KEY (congregation_id)
+      REFERENCES public_congregation_directory(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS members (
     id VARCHAR(64) PRIMARY KEY,
@@ -240,6 +313,37 @@ async function ensureSubscriptionPlanColumns() {
   if (!indexes.length) await database.query('ALTER TABLE subscriptions ADD INDEX idx_subscriptions_saas_plan (saas_plan_id, saas_plan_price_id)')
 }
 
+async function ensureAdvertisingColumns() {
+  const columnsToAdd = [
+    ['organization_id', 'VARCHAR(64) NULL'],
+    ['purchased_days', 'INT UNSIGNED NOT NULL DEFAULT 0'],
+  ]
+  for (const [columnName, definition] of columnsToAdd) {
+    const [columns] = await database.execute(`
+      SELECT COLUMN_NAME FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'brand_ads' AND COLUMN_NAME = ?
+    `, [columnName])
+    if (!columns.length) {
+      try {
+        await database.query(`ALTER TABLE brand_ads ADD COLUMN ${columnName} ${definition}`)
+      } catch (error) {
+        if (error.code !== 'ER_DUP_FIELDNAME') throw error
+      }
+    }
+  }
+  const [indexes] = await database.execute(`
+    SELECT INDEX_NAME FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'brand_ads' AND INDEX_NAME = 'idx_brand_ads_organization'
+  `)
+  if (!indexes.length) {
+    try {
+      await database.query('ALTER TABLE brand_ads ADD INDEX idx_brand_ads_organization (organization_id, status, ends_at)')
+    } catch (error) {
+      if (error.code !== 'ER_DUP_KEYNAME') throw error
+    }
+  }
+}
+
 async function ensureExistingTenantSubscriptions() {
   await database.execute(`
     INSERT INTO subscriptions (id, organization_id, status, stripe_price_id)
@@ -303,6 +407,7 @@ export async function initializeDatabase() {
   await ensureModulePublicColumn()
   await ensureSubscriptionPriceIsOptional()
   await ensureSubscriptionPlanColumns()
+  await ensureAdvertisingColumns()
   await ensureExistingTenantSubscriptions()
   await ensureDefaultSaasPlans()
   await ensureBootstrapSuperadmin()

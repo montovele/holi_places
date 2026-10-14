@@ -49,7 +49,7 @@ test('congregation registration creates a pending account without starting Strip
 test('Stripe checkout completion is recorded idempotently but does not activate before invoice payment', async () => {
   const payload = Buffer.from(JSON.stringify({
     id: 'evt_checkout_1', type: 'checkout.session.completed', data: { object: {
-      id: 'cs_test_1', client_reference_id: 'sub_internal_1', subscription: 'sub_stripe_1',
+      id: 'cs_test_1', mode: 'subscription', client_reference_id: 'sub_internal_1', subscription: 'sub_stripe_1',
       customer: 'cus_1', metadata: { subscriptionId: 'sub_internal_1' },
     } },
   }))
@@ -75,6 +75,65 @@ test('Stripe checkout completion is recorded idempotently but does not activate 
   assert.deepEqual(calls[2].parameters.slice(0, 2), ['sub_stripe_1', 'cus_1'])
 })
 
+test('paid advertising checkout activates only its matching organization order and extends days once', async () => {
+  const payload = Buffer.from(JSON.stringify({
+    id: 'evt_ad_paid_1', type: 'checkout.session.completed', data: { object: {
+      id: 'cs_ad_1', mode: 'payment', payment_status: 'paid', amount_total: 4200, currency: 'mxn',
+      payment_intent: 'pi_ad_1', metadata: { adOrderId: 'order_ad_1', organizationId: 'org_ad_1' },
+    } },
+  }))
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+  const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: process.env.STRIPE_WEBHOOK_SECRET })
+  const calls = []
+  const connection = {
+    async beginTransaction() {},
+    async execute(sql, parameters) {
+      calls.push({ sql, parameters })
+      if (sql.includes('INSERT IGNORE')) return [{ affectedRows: 1 }]
+      if (sql.includes('FROM ad_purchase_orders')) return [[{
+        id: 'order_ad_1', campaignId: 'campaign_ad_1', organizationId: 'org_ad_1',
+        daysPurchased: 7, amountMinor: 4200, currency: 'MXN', status: 'pending',
+      }]]
+      return [{ affectedRows: 1 }]
+    },
+    async commit() {}, async rollback() {}, release() {},
+  }
+
+  const result = await processStripeWebhook({ async getConnection() { return connection } }, payload, signature)
+  assert.deepEqual(result, { received: true, duplicate: false })
+  assert.ok(calls.some(({ sql, parameters }) => sql.includes("SET status = 'paid'") && parameters[2] === 'order_ad_1'))
+  const activation = calls.find(({ sql }) => sql.includes('UPDATE brand_ads SET starts_at'))
+  assert.ok(activation)
+  assert.deepEqual(activation.parameters, [7, 7, 'campaign_ad_1', 'org_ad_1'])
+})
+
+test('paid advertising checkout rejects Stripe amount that differs from its order', async () => {
+  const payload = Buffer.from(JSON.stringify({
+    id: 'evt_ad_mismatch', type: 'checkout.session.completed', data: { object: {
+      id: 'cs_ad_mismatch', mode: 'payment', payment_status: 'paid', amount_total: 100, currency: 'mxn',
+      metadata: { adOrderId: 'order_ad_mismatch', organizationId: 'org_ad_1' },
+    } },
+  }))
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+  const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: process.env.STRIPE_WEBHOOK_SECRET })
+  const connection = {
+    async beginTransaction() {},
+    async execute(sql) {
+      if (sql.includes('INSERT IGNORE')) return [{ affectedRows: 1 }]
+      if (sql.includes('FROM ad_purchase_orders')) return [[{
+        id: 'order_ad_mismatch', campaignId: 'campaign_ad_1', organizationId: 'org_ad_1',
+        daysPurchased: 7, amountMinor: 4200, currency: 'MXN', status: 'pending',
+      }]]
+      return [{ affectedRows: 1 }]
+    },
+    async commit() {}, async rollback() {}, release() {},
+  }
+  await assert.rejects(
+    processStripeWebhook({ async getConnection() { return connection } }, payload, signature),
+    { status: 409 },
+  )
+})
+
 test('active subscription webhook stores period dates from subscription items', async () => {
   const calls = []
   const payload = Buffer.from(JSON.stringify({
@@ -86,7 +145,7 @@ test('active subscription webhook stores period dates from subscription items', 
       status: 'active',
       customer: 'cus_period',
       metadata: { subscriptionId: 'sub_internal_period' },
-      items: { data: [{ current_period_start: 1780000000, current_period_end: 1782678400 }] },
+      items: { data: [{ current_period_start: 1811536000, current_period_end: 1814214400 }] },
     } },
   }))
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -106,8 +165,8 @@ test('active subscription webhook stores period dates from subscription items', 
   assert.ok(update)
   assert.match(update.sql, /status = COALESCE\(\?, status\)/)
   assert.equal(update.parameters[0], null)
-  assert.equal(update.parameters[3], '2026-05-28 20:26:40')
-  assert.equal(update.parameters[4], '2026-06-28 20:26:40')
+  assert.equal(update.parameters[3], '2027-05-28 20:26:40')
+  assert.equal(update.parameters[4], '2027-06-28 20:26:40')
 })
 
 test('subscription status backfills missing period dates from Stripe subscription items', async () => {
@@ -134,7 +193,7 @@ test('subscription status backfills missing period dates from Stripe subscriptio
             subscription: {
               id: 'sub_stripe_legacy',
               status: 'active',
-              items: { data: [{ current_period_start: 1780000000, current_period_end: 1782678400 }] },
+              items: { data: [{ current_period_start: 1811536000, current_period_end: 1814214400 }] },
             },
           }
         },
@@ -143,8 +202,8 @@ test('subscription status backfills missing period dates from Stripe subscriptio
   }
 
   const result = await getOrganizationSubscription(database, 'org_period', stripe)
-  assert.equal(result.currentPeriodStart, '2026-05-28 20:26:40')
-  assert.equal(result.currentPeriodEnd, '2026-06-28 20:26:40')
+  assert.equal(result.currentPeriodStart, '2027-05-28 20:26:40')
+  assert.equal(result.currentPeriodEnd, '2027-06-28 20:26:40')
   assert.equal(result.status, 'active')
   assert.equal('stripeSubscriptionId' in result, false)
   assert.ok(calls.some(({ sql }) => sql.includes('UPDATE subscriptions') && sql.includes('current_period_start')))
@@ -170,20 +229,20 @@ test('subscription status recovers dates from customer subscriptions and latest 
     subscriptions: {
       async list(options) {
         assert.deepEqual(options, { customer: 'cus_saved', status: 'all', limit: 100 })
-        return { data: [{ id: 'sub_customer', status: 'active', latest_invoice: 'in_latest', created: 1780000000 }] }
+        return { data: [{ id: 'sub_customer', status: 'active', latest_invoice: 'in_latest', created: 1811536000 }] }
       },
     },
     invoices: {
       async retrieve(id) {
         assert.equal(id, 'in_latest')
-        return { period_start: 1780000000, period_end: 1782678400 }
+        return { period_start: 1811536000, period_end: 1814214400 }
       },
     },
   }
 
   const result = await getOrganizationSubscription(database, 'org_customer', stripe)
-  assert.equal(result.currentPeriodStart, '2026-05-28 20:26:40')
-  assert.equal(result.currentPeriodEnd, '2026-06-28 20:26:40')
+  assert.equal(result.currentPeriodStart, '2027-05-28 20:26:40')
+  assert.equal(result.currentPeriodEnd, '2027-06-28 20:26:40')
   assert.equal(result.status, 'active')
   assert.ok(calls.some((sql) => sql.includes('UPDATE subscriptions')))
 })

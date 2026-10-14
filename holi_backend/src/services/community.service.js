@@ -1,16 +1,12 @@
 export async function getPublicCommunityData(database, now = new Date()) {
-  const [[congregations], [events], [posts], [moduleUpdates]] = await Promise.all([
+  const syntheticFixturesEnabled = process.env.NODE_ENV !== 'production'
+  const [[congregations], [events], [posts], [moduleUpdates], [ads], [syntheticRecords]] = await Promise.all([
     database.execute(`
-      SELECT locations.id, locations.organization_id AS organizationId, locations.name, locations.city, locations.address,
-        locations.latitude, locations.longitude
-      FROM locations
-      WHERE EXISTS (
-        SELECT 1 FROM subscriptions
-        WHERE subscriptions.organization_id = locations.organization_id
-          AND subscriptions.status = 'active'
-          AND (subscriptions.current_period_end IS NULL OR subscriptions.current_period_end > UTC_TIMESTAMP())
-      )
-      ORDER BY locations.name
+      SELECT id, NULL AS organizationId, name, 'Tijuana' AS city, address, type,
+        phone, website, rating, review_count AS reviewCount, latitude, longitude,
+        distance_km AS distanceKm, verified_at AS verifiedAt, maps_url AS mapsUrl
+      FROM public_congregation_directory
+      ORDER BY name
     `),
     database.execute(`
       SELECT events.id, events.name AS title, events.description,
@@ -71,7 +67,48 @@ export async function getPublicCommunityData(database, now = new Date()) {
       ORDER BY module_records.record_date DESC, module_records.title
       LIMIT 100
     `),
+    database.execute(`
+      SELECT id, brand_name AS brandName, headline, body,
+        CASE WHEN image_url REGEXP '^/api/public/(ads/media/|media/)[0-9a-f-]{36}\\.(jpg|png|webp|mp4|webm)$'
+          THEN CONCAT('/api/public/media/', SUBSTRING_INDEX(image_url, '/', -1)) ELSE '' END AS imageUrl,
+        cta_label AS ctaLabel, destination_url AS destinationUrl, placement
+      FROM brand_ads
+      WHERE status = 'active' AND (organization_id IS NULL OR purchased_days > 0)
+        AND (starts_at IS NULL OR starts_at <= ?)
+        AND (ends_at IS NULL OR ends_at > ?)
+      ORDER BY RAND()
+      LIMIT 20
+    `, [now.toISOString().slice(0, 19).replace('T', ' '), now.toISOString().slice(0, 19).replace('T', ' ')]),
+    syntheticFixturesEnabled
+      ? database.execute(`
+        SELECT fixtures.record_id AS id, fixtures.module_id AS moduleId,
+          fixtures.congregation_id AS congregationId, fixtures.record_data AS recordData,
+          directory.name AS congregation
+        FROM synthetic_module_fixtures AS fixtures
+        JOIN public_congregation_directory AS directory ON directory.id = fixtures.congregation_id
+        WHERE fixtures.fixture_id = 'synthetic-tijuana-directory-v1'
+          AND fixtures.synthetic = 1 AND fixtures.visibility = 'private' AND fixtures.is_public = 0
+        ORDER BY directory.name, fixtures.module_id, fixtures.record_id
+      `)
+      : Promise.resolve([[]]),
   ])
 
-  return { congregations, events, posts, moduleUpdates }
+  const syntheticUpdates = syntheticRecords.map(({ recordData, ...metadata }) => ({
+    ...(typeof recordData === 'string' ? JSON.parse(recordData) : recordData),
+    ...metadata,
+    organizationId: null,
+    synthetic: true,
+    isSynthetic: true,
+    public: false,
+    visibility: 'private',
+  }))
+
+  return {
+    congregations,
+    events,
+    posts,
+    moduleUpdates: [...moduleUpdates, ...syntheticUpdates],
+    ads,
+    syntheticFixturesEnabled,
+  }
 }
