@@ -1,6 +1,6 @@
 export async function getPublicCommunityData(database, now = new Date()) {
   const syntheticFixturesEnabled = process.env.NODE_ENV !== 'production'
-  const [[congregations], [events], [posts], [moduleUpdates], [ads], [syntheticRecords]] = await Promise.all([
+  const [[congregations], [tenantCongregations], [events], [serviceSchedules], [posts], [moduleUpdates], [ads], [syntheticRecords]] = await Promise.all([
     database.execute(`
       SELECT id, NULL AS organizationId, name, 'Tijuana' AS city, address, type,
         phone, website, rating, review_count AS reviewCount, latitude, longitude,
@@ -8,6 +8,41 @@ export async function getPublicCommunityData(database, now = new Date()) {
       FROM public_congregation_directory
       ORDER BY name
     `),
+    database.execute(`
+      SELECT locations.id, locations.organization_id AS organizationId,
+        organizations.name AS organizationName, locations.name, locations.city, locations.address,
+        '' AS type, '' AS phone, '' AS website, NULL AS rating, NULL AS reviewCount,
+        locations.latitude, locations.longitude, NULL AS distanceKm, NULL AS verifiedAt, '' AS mapsUrl
+      FROM locations
+      JOIN organizations ON organizations.id = locations.organization_id
+      WHERE EXISTS (
+        SELECT 1 FROM subscriptions
+        WHERE subscriptions.organization_id = locations.organization_id
+          AND subscriptions.status = 'active'
+          AND (subscriptions.current_period_end IS NULL OR subscriptions.current_period_end > UTC_TIMESTAMP())
+      )
+      AND (
+        EXISTS (
+          SELECT 1 FROM service_schedules
+          WHERE service_schedules.location_id = locations.id
+            AND service_schedules.organization_id = locations.organization_id
+            AND service_schedules.status = 'active' AND service_schedules.is_public = 1
+        )
+        OR EXISTS (
+          SELECT 1 FROM events
+          WHERE events.location_id = locations.id
+            AND events.organization_id = locations.organization_id
+            AND events.status = 'scheduled' AND events.starts_at >= ?
+        )
+        OR EXISTS (
+          SELECT 1 FROM community_posts
+          WHERE community_posts.location_id = locations.id
+            AND community_posts.organization_id = locations.organization_id
+            AND community_posts.status = 'published'
+        )
+      )
+      ORDER BY locations.name
+    `, [now.toISOString()]),
     database.execute(`
       SELECT events.id, events.name AS title, events.description,
         events.starts_at AS startsAt, events.ends_at AS endsAt,
@@ -31,9 +66,30 @@ export async function getPublicCommunityData(database, now = new Date()) {
       LIMIT 50
     `, [now.toISOString()]),
     database.execute(`
+      SELECT service_schedules.id, service_schedules.title,
+        service_schedules.service_type AS serviceType,
+        service_schedules.day_of_week AS dayOfWeek,
+        service_schedules.starts_at AS startsAt, service_schedules.ends_at AS endsAt,
+        service_schedules.description, service_schedules.location_id AS locationId,
+        locations.name AS congregation, locations.city
+      FROM service_schedules
+      JOIN locations ON locations.id = service_schedules.location_id
+        AND locations.organization_id = service_schedules.organization_id
+      WHERE service_schedules.status = 'active' AND service_schedules.is_public = 1
+        AND EXISTS (
+          SELECT 1 FROM subscriptions
+          WHERE subscriptions.organization_id = service_schedules.organization_id
+            AND subscriptions.status = 'active'
+            AND (subscriptions.current_period_end IS NULL OR subscriptions.current_period_end > UTC_TIMESTAMP())
+        )
+      ORDER BY service_schedules.day_of_week, service_schedules.starts_at
+      LIMIT 200
+    `),
+    database.execute(`
       SELECT community_posts.id, community_posts.type, community_posts.title,
         community_posts.excerpt, community_posts.body,
-        community_posts.image_url AS imageUrl, community_posts.published_at AS publishedAt,
+        community_posts.image_url AS imageUrl, community_posts.image_url AS mediaUrl,
+        community_posts.media_type AS mediaType, community_posts.published_at AS publishedAt,
         locations.id AS locationId, locations.name AS congregation, locations.city,
         locations.latitude, locations.longitude
       FROM community_posts
@@ -104,11 +160,37 @@ export async function getPublicCommunityData(database, now = new Date()) {
   }))
 
   return {
-    congregations,
+    congregations: [...congregations, ...tenantCongregations],
     events,
+    serviceSchedules,
     posts,
     moduleUpdates: [...moduleUpdates, ...syntheticUpdates],
     ads,
     syntheticFixturesEnabled,
   }
+}
+
+export async function getPublicCommunityPost(database, postId) {
+  const [posts] = await database.execute(`
+    SELECT community_posts.id, community_posts.type, community_posts.title,
+      community_posts.excerpt, community_posts.body,
+      community_posts.image_url AS imageUrl, community_posts.image_url AS mediaUrl,
+      community_posts.media_type AS mediaType, community_posts.published_at AS publishedAt,
+      locations.id AS locationId, locations.name AS congregation, locations.city,
+      locations.latitude, locations.longitude
+    FROM community_posts
+    JOIN locations ON locations.id = community_posts.location_id
+      AND locations.organization_id = community_posts.organization_id
+    WHERE community_posts.id = ?
+      AND community_posts.status = 'published'
+      AND community_posts.organization_id = locations.organization_id
+      AND EXISTS (
+        SELECT 1 FROM subscriptions
+        WHERE subscriptions.organization_id = community_posts.organization_id
+          AND subscriptions.status = 'active'
+          AND (subscriptions.current_period_end IS NULL OR subscriptions.current_period_end > UTC_TIMESTAMP())
+      )
+    LIMIT 1
+  `, [postId])
+  return posts[0] || null
 }

@@ -115,6 +115,18 @@ const schema = [
     INDEX idx_ad_orders_campaign (campaign_id, created_at),
     INDEX idx_ad_orders_status (status, created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS donations (
+    id VARCHAR(64) PRIMARY KEY,
+    stripe_checkout_session_id VARCHAR(255) NULL UNIQUE,
+    stripe_payment_intent_id VARCHAR(255) NULL,
+    amount_minor INT UNSIGNED NOT NULL,
+    currency CHAR(3) NOT NULL,
+    status VARCHAR(24) NOT NULL DEFAULT 'pending',
+    paid_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_donations_status_created (status, created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(64) PRIMARY KEY,
       record_date VARCHAR(40) NOT NULL DEFAULT '',
@@ -188,6 +200,25 @@ const schema = [
     location_id VARCHAR(64) NOT NULL,
     CONSTRAINT fk_events_location FOREIGN KEY (location_id) REFERENCES locations(id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS service_schedules (
+    id VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL,
+    location_id VARCHAR(64) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    service_type VARCHAR(40) NOT NULL,
+    day_of_week TINYINT UNSIGNED NOT NULL,
+    starts_at TIME NOT NULL,
+    ends_at TIME NOT NULL,
+    description TEXT NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'active',
+    is_public TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_service_schedules_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_service_schedules_location FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
+    INDEX idx_service_schedules_public (status, is_public, day_of_week, starts_at),
+    INDEX idx_service_schedules_tenant (organization_id, location_id, day_of_week)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS reservations (
     id VARCHAR(64) PRIMARY KEY,
     event_id VARCHAR(64) NOT NULL,
@@ -227,11 +258,29 @@ const schema = [
     excerpt VARCHAR(500) NOT NULL,
     body TEXT NOT NULL,
     image_url VARCHAR(1000) NOT NULL DEFAULT '',
+    media_type VARCHAR(16) NOT NULL DEFAULT 'image',
     status VARCHAR(24) NOT NULL DEFAULT 'published',
     published_at VARCHAR(40) NOT NULL,
     CONSTRAINT fk_community_posts_location FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
     INDEX idx_community_posts_publication (status, published_at),
     INDEX idx_community_posts_location (location_id, status, published_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS social_connections (
+    organization_id VARCHAR(64) PRIMARY KEY,
+    encrypted_credentials MEDIUMTEXT NOT NULL,
+    updated_by VARCHAR(64) NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_social_connections_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS social_oauth_states (
+    state_hash CHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL,
+    initiated_by VARCHAR(64) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    consumed_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_social_oauth_states_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    INDEX idx_social_oauth_states_expiry (expires_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ]
 
@@ -282,6 +331,14 @@ async function ensureTenantColumns() {
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'module_records' AND COLUMN_NAME = 'is_public'
     `)
     if (!columns.length) await database.query('ALTER TABLE module_records ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 0')
+  }
+
+  async function ensureCommunityPostMediaColumn() {
+    const [columns] = await database.execute(`
+      SELECT COLUMN_NAME FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'community_posts' AND COLUMN_NAME = 'media_type'
+    `)
+    if (!columns.length) await database.query("ALTER TABLE community_posts ADD COLUMN media_type VARCHAR(16) NOT NULL DEFAULT 'image'")
   }
 
 async function ensureSubscriptionPriceIsOptional() {
@@ -405,6 +462,7 @@ export async function initializeDatabase() {
   for (const statement of schema) await database.query(statement)
   await ensureTenantColumns()
   await ensureModulePublicColumn()
+  await ensureCommunityPostMediaColumn()
   await ensureSubscriptionPriceIsOptional()
   await ensureSubscriptionPlanColumns()
   await ensureAdvertisingColumns()

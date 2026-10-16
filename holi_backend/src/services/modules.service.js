@@ -58,7 +58,21 @@ export async function getModuleData(database, moduleId, organizationId) {
   }
 
   if (isAgendaModule(moduleId)) {
-    return { moduleId, records: await eventRecords(database, organizationId) }
+    const [schedules] = await database.execute(`
+      SELECT service_schedules.id, service_schedules.title,
+        service_schedules.service_type AS serviceType,
+        service_schedules.day_of_week AS dayOfWeek,
+        service_schedules.starts_at AS startsAt, service_schedules.ends_at AS endsAt,
+        service_schedules.description, service_schedules.status,
+        service_schedules.is_public AS isPublic,
+        service_schedules.location_id AS locationId, locations.name AS location
+      FROM service_schedules
+      JOIN locations ON locations.id = service_schedules.location_id
+        AND locations.organization_id = service_schedules.organization_id
+      WHERE service_schedules.organization_id = ?
+      ORDER BY service_schedules.day_of_week, service_schedules.starts_at, service_schedules.title
+    `, [organizationId])
+    return { moduleId, records: await eventRecords(database, organizationId), schedules }
   }
 
   if (moduleId === 'reservations') {
@@ -115,6 +129,85 @@ function invalid(message, status = 400) {
   const error = new Error(message)
   error.status = status
   return error
+}
+
+const serviceTypes = new Set(['Misa', 'Oración', 'Culto', 'Reunión', 'Otro'])
+const serviceTimePattern = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/
+
+function validateServiceSchedule(input = {}) {
+  const title = requiredText(input.title, 'El nombre del servicio')
+  const serviceType = requiredText(input.serviceType, 'El tipo de actividad', 40)
+  if (!serviceTypes.has(serviceType)) throw invalid('Selecciona un tipo de actividad válido.')
+  const dayOfWeek = Number(input.dayOfWeek)
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    throw invalid('Selecciona un día de la semana válido.')
+  }
+  if (!serviceTimePattern.test(input.startsAt || '') || !serviceTimePattern.test(input.endsAt || '')) {
+    throw invalid('Indica una hora de inicio y de fin válidas.')
+  }
+  if (input.endsAt <= input.startsAt) throw invalid('La hora de fin debe ser posterior a la hora de inicio.')
+  if (input.status && !['active', 'inactive'].includes(input.status)) throw invalid('Selecciona un estado válido.')
+  if (!input.locationId) throw invalid('Selecciona una sede para el horario.')
+  return {
+    title,
+    serviceType,
+    dayOfWeek,
+    startsAt: input.startsAt.slice(0, 8),
+    endsAt: input.endsAt.slice(0, 8),
+    description: typeof input.description === 'string' ? input.description.trim() : '',
+    status: input.status || 'active',
+    isPublic: Boolean(input.isPublic),
+    locationId: input.locationId,
+  }
+}
+
+async function assertScheduleLocation(database, locationId, organizationId) {
+  const [locations] = await database.execute(
+    'SELECT id FROM locations WHERE id = ? AND organization_id = ?',
+    [locationId, organizationId],
+  )
+  if (!locations.length) throw invalid('La sede seleccionada no existe en esta organización.', 404)
+}
+
+export async function createServiceSchedule(database, organizationId, input = {}) {
+  const schedule = validateServiceSchedule(input)
+  await assertScheduleLocation(database, schedule.locationId, organizationId)
+  const id = `schedule-${randomUUID()}`
+  await database.execute(`
+    INSERT INTO service_schedules
+      (id, organization_id, location_id, title, service_type, day_of_week, starts_at, ends_at, description, status, is_public)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    id, organizationId, schedule.locationId, schedule.title, schedule.serviceType,
+    schedule.dayOfWeek, schedule.startsAt, schedule.endsAt, schedule.description,
+    schedule.status, schedule.isPublic ? 1 : 0,
+  ])
+  return { id, ...schedule, organizationId, isPublic: schedule.isPublic }
+}
+
+export async function updateServiceSchedule(database, scheduleId, organizationId, input = {}) {
+  const schedule = validateServiceSchedule(input)
+  await assertScheduleLocation(database, schedule.locationId, organizationId)
+  const [result] = await database.execute(`
+    UPDATE service_schedules
+    SET location_id = ?, title = ?, service_type = ?, day_of_week = ?,
+      starts_at = ?, ends_at = ?, description = ?, status = ?, is_public = ?
+    WHERE id = ? AND organization_id = ?
+  `, [
+    schedule.locationId, schedule.title, schedule.serviceType, schedule.dayOfWeek,
+    schedule.startsAt, schedule.endsAt, schedule.description, schedule.status,
+    schedule.isPublic ? 1 : 0, scheduleId, organizationId,
+  ])
+  if (!result.affectedRows) throw invalid('El horario no existe en esta organización.', 404)
+  return { id: scheduleId, ...schedule, organizationId }
+}
+
+export async function deleteServiceSchedule(database, scheduleId, organizationId) {
+  const [result] = await database.execute(
+    'DELETE FROM service_schedules WHERE id = ? AND organization_id = ?',
+    [scheduleId, organizationId],
+  )
+  if (!result.affectedRows) throw invalid('El horario no existe en esta organización.', 404)
 }
 
 function validateDateRange(startsAt, endsAt) {

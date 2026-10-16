@@ -75,6 +75,38 @@ test('Stripe checkout completion is recorded idempotently but does not activate 
   assert.deepEqual(calls[2].parameters.slice(0, 2), ['sub_stripe_1', 'cus_1'])
 })
 
+test('paid community donations are confirmed by a signed Stripe webhook and recorded idempotently', async () => {
+  const payload = Buffer.from(JSON.stringify({
+    id: 'evt_donation_paid_1', type: 'checkout.session.completed', data: { object: {
+      id: 'cs_donation_1', mode: 'payment', payment_status: 'paid', amount_total: 25000, currency: 'mxn',
+      payment_intent: 'pi_donation_1', metadata: { donationId: 'donation_1' },
+    } },
+  }))
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+  const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: process.env.STRIPE_WEBHOOK_SECRET })
+  const calls = []
+  const connection = {
+    async beginTransaction() {},
+    async execute(sql, parameters = []) {
+      calls.push({ sql, parameters })
+      if (sql.includes('FROM donations')) {
+        return [[{ id: 'donation_1', amountMinor: 25000, currency: 'MXN', status: 'pending' }], []]
+      }
+      if (sql.includes('INSERT IGNORE')) return [{ affectedRows: 1 }, []]
+      return [{ affectedRows: 1 }, []]
+    },
+    async commit() {},
+    async rollback() {},
+    release() {},
+  }
+
+  const result = await processStripeWebhook({ async getConnection() { return connection } }, payload, signature)
+  assert.deepEqual(result, { received: true, duplicate: false })
+  const paymentUpdate = calls.find(({ sql }) => sql.includes("UPDATE donations SET status = 'paid'"))
+  assert.ok(paymentUpdate)
+  assert.deepEqual(paymentUpdate.parameters, ['cs_donation_1', 'pi_donation_1', 'donation_1', 'cs_donation_1'])
+})
+
 test('paid advertising checkout activates only its matching organization order and extends days once', async () => {
   const payload = Buffer.from(JSON.stringify({
     id: 'evt_ad_paid_1', type: 'checkout.session.completed', data: { object: {

@@ -387,8 +387,16 @@ export async function processStripeWebhook(database, rawBody, signature) {
     'checkout.session.async_payment_failed',
     'checkout.session.expired',
   ].includes(event.type) && checkoutSession.mode === 'payment' && checkoutSession.metadata?.adOrderId
+  const donationPaymentEvent = [
+    'checkout.session.completed',
+    'checkout.session.async_payment_succeeded',
+    'checkout.session.async_payment_failed',
+    'checkout.session.expired',
+  ].includes(event.type) && checkoutSession.mode === 'payment' && checkoutSession.metadata?.donationId
   if (adPaymentEvent) {
     // Ad purchases are activated in the same transaction as webhook de-duplication below.
+  } else if (donationPaymentEvent) {
+    // Donations are recorded in the same transaction as webhook de-duplication below.
   } else if (event.type === 'checkout.session.completed' && checkoutSession.mode === 'subscription') {
     const session = event.data.object
     internalSubscriptionId = session.metadata?.subscriptionId || session.client_reference_id
@@ -410,6 +418,7 @@ export async function processStripeWebhook(database, rawBody, signature) {
   try {
     await connection.beginTransaction()
     let paidAdOrder = null
+    let paidDonation = null
     if (adPaymentEvent && event.data.object.payment_status === 'paid') {
       const session = event.data.object
       const [orders] = await connection.execute(`
@@ -425,6 +434,22 @@ export async function processStripeWebhook(database, rawBody, signature) {
         && (Number(session.amount_total) !== Number(paidAdOrder.amountMinor)
           || String(session.currency).toUpperCase() !== paidAdOrder.currency)) {
         invalid('El importe confirmado por Stripe no coincide con la orden de publicidad.', 409)
+      }
+    }
+    if (donationPaymentEvent && event.data.object.payment_status === 'paid') {
+      const session = event.data.object
+      const [donations] = await connection.execute(`
+        SELECT id, amount_minor AS amountMinor, currency, status
+        FROM donations
+        WHERE id = ? AND (stripe_checkout_session_id IS NULL OR stripe_checkout_session_id = ?)
+        LIMIT 1 FOR UPDATE
+      `, [session.metadata.donationId, session.id])
+      paidDonation = donations[0]
+      if (!paidDonation) invalid('La donación asociada al pago no existe.', 404)
+      if (['pending', 'failed'].includes(paidDonation.status)
+        && (Number(session.amount_total) !== Number(paidDonation.amountMinor)
+          || String(session.currency).toUpperCase() !== paidDonation.currency)) {
+        invalid('El importe confirmado por Stripe no coincide con la donación.', 409)
       }
     }
     const [insertResult] = await connection.execute(
@@ -464,6 +489,30 @@ export async function processStripeWebhook(database, rawBody, signature) {
             WHERE id = ? AND organization_id = ?
           `, [order.daysPurchased, order.daysPurchased, order.campaignId, order.organizationId])
         }
+      }
+    }
+
+    if (donationPaymentEvent) {
+      const session = event.data.object
+      const donationId = session.metadata.donationId
+      if (['checkout.session.async_payment_failed', 'checkout.session.expired'].includes(event.type)) {
+        await connection.execute(`
+          UPDATE donations SET status = ?
+          WHERE id = ? AND (stripe_checkout_session_id IS NULL OR stripe_checkout_session_id = ?)
+            AND status = 'pending'
+        `, [event.type === 'checkout.session.expired' ? 'expired' : 'failed', donationId, session.id])
+      } else if (session.payment_status === 'paid') {
+        await connection.execute(`
+          UPDATE donations SET status = 'paid', stripe_checkout_session_id = ?,
+            stripe_payment_intent_id = ?, paid_at = UTC_TIMESTAMP()
+          WHERE id = ? AND status IN ('pending', 'failed')
+            AND (stripe_checkout_session_id IS NULL OR stripe_checkout_session_id = ?)
+        `, [
+          session.id,
+          typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || null,
+          paidDonation.id,
+          session.id,
+        ])
       }
     }
 

@@ -1,6 +1,40 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getPublicCommunityData } from './community.service.js'
+import { getPublicCommunityData, getPublicCommunityPost } from './community.service.js'
+
+test('public shared links resolve a single published post beyond the feed limit', async () => {
+  const database = {
+    async execute(sql, parameters) {
+      assert.match(sql, /community_posts\.id = \?/)
+      assert.match(sql, /community_posts\.status = 'published'/)
+      assert.match(sql, /subscriptions\.status = 'active'/)
+      assert.match(sql, /community_posts\.organization_id = locations\.organization_id/)
+      assert.deepEqual(parameters, ['post-shared'])
+      return [[{
+        id: 'post-shared',
+        title: 'Publicación compartida',
+        locationId: 'location-1',
+        mediaType: 'video',
+      }]]
+    },
+  }
+
+  const post = await getPublicCommunityPost(database, 'post-shared')
+  assert.equal(post.id, 'post-shared')
+  assert.equal(post.mediaType, 'video')
+})
+
+test('public shared links do not expose posts that are unpublished or unavailable', async () => {
+  const database = {
+    async execute(sql) {
+      assert.match(sql, /community_posts\.status = 'published'/)
+      assert.match(sql, /subscriptions\.status = 'active'/)
+      return [[]]
+    },
+  }
+
+  assert.equal(await getPublicCommunityPost(database, 'post-private'), null)
+})
 
 test('public community feed returns congregation, future events, and published posts only', async () => {
   const now = new Date('2026-10-09T12:00:00.000Z')
@@ -15,6 +49,15 @@ test('public community feed returns congregation, future events, and published p
           reviewCount: 20, latitude: 32.5, longitude: -117, mapsUrl: 'https://maps.google.com/?q=central',
         }]]
       }
+      if (sql.includes('FROM locations') && sql.includes('JOIN organizations')) {
+        assert.match(sql, /service_schedules\.is_public = 1/)
+        assert.match(sql, /subscriptions\.status = 'active'/)
+        assert.deepEqual(parameters, [now.toISOString()])
+        return [[{
+          id: 'location-central', organizationId: 'org-central', organizationName: 'Congregación Central',
+          name: 'Sede Central', city: 'Tijuana', address: 'Calle Uno 100',
+        }]]
+      }
       if (sql.includes('FROM events')) {
         assert.match(sql, /events\.status = 'scheduled'/)
         assert.match(sql, /subscriptions\.status = 'active'/)
@@ -23,6 +66,15 @@ test('public community feed returns congregation, future events, and published p
         return [[{
           id: 'event-public', title: 'Próximo encuentro', congregation: 'Sede Central',
           startsAt: '2026-10-10T18:00:00.000Z', latitude: 19.4326, longitude: -99.1332,
+        }]]
+      }
+      if (sql.includes('FROM service_schedules')) {
+        assert.match(sql, /service_schedules\.is_public = 1/)
+        assert.match(sql, /service_schedules\.status = 'active'/)
+        assert.match(sql, /subscriptions\.status = 'active'/)
+        return [[{
+          id: 'schedule-sunday', locationId: 'location-central',
+          title: 'Misa dominical', serviceType: 'Misa', dayOfWeek: 0, startsAt: '09:00:00',
         }]]
       }
       if (sql.includes('FROM community_posts')) {
@@ -59,11 +111,13 @@ test('public community feed returns congregation, future events, and published p
   }
 
   const result = await getPublicCommunityData(database, now)
-  assert.equal(result.congregations.length, 1)
+  assert.equal(result.congregations.length, 2)
   assert.equal(result.congregations[0].latitude, 32.5)
   assert.equal(result.congregations[0].type, 'Iglesia católica')
   assert.equal(result.congregations[0].mapsUrl, 'https://maps.google.com/?q=central')
+  assert.equal(result.congregations[1].organizationId, 'org-central')
   assert.equal(result.events[0].id, 'event-public')
+  assert.equal(result.serviceSchedules[0].title, 'Misa dominical')
   assert.equal(result.events[0].longitude, -99.1332)
   assert.equal(result.posts[0].id, 'post-public')
   assert.equal(result.moduleUpdates[0].id, 'public-group-1')
@@ -79,7 +133,9 @@ test('synthetic module fixture records are returned only outside production and 
   const database = {
     async execute(sql) {
       if (sql.includes('FROM public_congregation_directory')) return [[]]
+      if (sql.includes('FROM locations') && sql.includes('JOIN organizations')) return [[]]
       if (sql.includes('FROM events')) return [[]]
+      if (sql.includes('FROM service_schedules')) return [[]]
       if (sql.includes('FROM community_posts')) return [[]]
       if (sql.includes('FROM module_records')) return [[]]
       if (sql.includes('FROM brand_ads')) return [[]]
@@ -115,7 +171,9 @@ test('production community feed does not query synthetic module fixtures', async
   const database = {
     async execute(sql) {
       if (sql.includes('FROM public_congregation_directory')) return [[]]
+      if (sql.includes('FROM locations') && sql.includes('JOIN organizations')) return [[]]
       if (sql.includes('FROM events')) return [[]]
+      if (sql.includes('FROM service_schedules')) return [[]]
       if (sql.includes('FROM community_posts')) return [[]]
       if (sql.includes('FROM module_records')) return [[]]
       if (sql.includes('FROM brand_ads')) return [[]]

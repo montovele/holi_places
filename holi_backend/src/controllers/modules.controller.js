@@ -3,8 +3,11 @@ import {
   assignEventToLocation,
   createLocationReservation,
   createModuleRecord as createRecord,
+  createServiceSchedule as createSchedule,
+  deleteServiceSchedule as deleteSchedule,
   deleteModuleRecord as deleteRecord,
   getModuleData,
+  updateServiceSchedule as updateSchedule,
   updateModuleRecord as updateRecord,
 } from '../services/modules.service.js'
 
@@ -35,4 +38,19 @@ export async function reserveLocation(request, response) {
 export async function assignEvent(request, response) {
   const event = await assignEventToLocation(database, request.params.eventId, request.body.locationId, request.auth.organizationId)
   response.json({ event })
+}
+
+export async function createServiceSchedule(request, response) {
+  const schedule = await createSchedule(database, request.auth.organizationId, request.body)
+  response.status(201).json({ schedule })
+}
+
+export async function updateServiceSchedule(request, response) {
+  const schedule = await updateSchedule(database, request.params.scheduleId, request.auth.organizationId, request.body)
+  response.json({ schedule })
+}
+
+export async function deleteServiceSchedule(request, response) {
+  await deleteSchedule(database, request.params.scheduleId, request.auth.organizationId)
+  response.status(204).end()
 }

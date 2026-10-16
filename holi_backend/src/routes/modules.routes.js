@@ -1,9 +1,22 @@
 import { Router } from 'express'
-import { assignEvent, createModuleRecord, deleteModuleRecord, readModule, reserveLocation, updateModuleRecord } from '../controllers/modules.controller.js'
+import {
+  assignEvent,
+  createModuleRecord,
+  createServiceSchedule,
+  deleteModuleRecord,
+  deleteServiceSchedule,
+  readModule,
+  reserveLocation,
+  updateModuleRecord,
+  updateServiceSchedule,
+} from '../controllers/modules.controller.js'
 import { requireModuleOperatorScope, requireRoles, requireSameOrigin } from '../middleware/auth.middleware.js'
 
 const router = Router()
 
+router.post('/events/schedules', requireSameOrigin, requireRoles('superadmin', 'admin'), createServiceSchedule)
+router.put('/events/schedules/:scheduleId', requireSameOrigin, requireRoles('superadmin', 'admin'), updateServiceSchedule)
+router.delete('/events/schedules/:scheduleId', requireSameOrigin, requireRoles('superadmin', 'admin'), deleteServiceSchedule)
 router.get('/:moduleId', readModule)
 router.post('/:moduleId', requireSameOrigin, requireModuleOperatorScope, createModuleRecord)
 router.put('/:moduleId/:recordId', requireSameOrigin, requireModuleOperatorScope, updateModuleRecord)

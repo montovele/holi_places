@@ -15,12 +15,17 @@ import usersRouter from './routes/users.routes.js'
 import billingRouter from './routes/billing.routes.js'
 import registrationRouter from './routes/registration.routes.js'
 import plansRouter from './routes/plans.routes.js'
+import saasSubscriptionsRouter from './routes/saas-subscriptions.routes.js'
 import publicPlansRouter from './routes/public-plans.routes.js'
 import appearanceRouter from './routes/appearance.routes.js'
 import adminAppearanceRouter from './routes/admin-appearance.routes.js'
 import adsRouter from './routes/ads.routes.js'
 import publicAdsRouter from './routes/public-ads.routes.js'
 import tenantAdsRouter from './routes/tenant-ads.routes.js'
+import socialPublishingRouter from './routes/social-publishing.routes.js'
+import socialOAuthRouter from './routes/social-oauth.routes.js'
+import publicDonationsRouter from './routes/public-donations.routes.js'
+import donationsAdminRouter from './routes/donations-admin.routes.js'
 import { stripeWebhook } from './controllers/billing.controller.js'
 
 const app = express()
@@ -44,13 +49,18 @@ app.use('/api/public/ads', publicAdsRouter)
 app.use('/api/public/media', publicAdsRouter)
 app.use('/api/public/appearance', appearanceRouter)
 app.use('/api/public/plans', publicPlansRouter)
+app.use('/api/public/donations', publicDonationsRouter)
+app.use('/api/social/meta', socialOAuthRouter)
 const requireAuthenticated = createAuthMiddleware(database)
 const requirePaidSubscription = createActiveSubscriptionMiddleware(database)
 app.use('/api/admin/organizations', requireAuthenticated, organizationsRouter)
 app.use('/api/admin/users', requireAuthenticated, usersRouter)
 app.use('/api/admin/saas/plans', requireAuthenticated, plansRouter)
+app.use('/api/admin/saas/subscriptions', requireAuthenticated, saasSubscriptionsRouter)
 app.use('/api/admin/ads', requireAuthenticated, adsRouter)
+app.use('/api/admin/donations', requireAuthenticated, donationsAdminRouter)
 app.use('/api/tenant/ads', requireAuthenticated, tenantAdsRouter)
+app.use('/api/tenant/social', requireAuthenticated, requirePaidSubscription, socialPublishingRouter)
 app.use('/api/admin/appearance', requireAuthenticated, adminAppearanceRouter)
 app.use('/api/billing', requireAuthenticated, billingRouter)
 app.use('/api/dashboard', requireAuthenticated, dashboardRouter)
@@ -59,7 +69,17 @@ app.use('/api/modules', requireAuthenticated, requirePaidSubscription, modulesRo
 app.use((error, request, response, next) => {
   if (response.headersSent) return next(error)
   const status = error.status || (['ER_DUP_ENTRY', 'ER_ROW_IS_REFERENCED_2'].includes(error.code) ? 409 : 500)
-  const message = status >= 500 && status !== 503 ? 'Ocurrió un error interno.' : error.message || 'Solicitud inválida.'
+  if (status === 500) {
+    console.error('Unhandled API error', {
+      method: request.method,
+      path: request.path,
+      name: error.name,
+      message: error.message,
+      code: error.code || null,
+      stack: error.stack,
+    })
+  }
+  const message = status >= 500 && status !== 502 && status !== 503 ? 'Ocurrió un error interno.' : error.message || 'Solicitud inválida.'
   response.status(status).json({
     error: {
       code: status === 404 ? 'NOT_FOUND' : status === 409 ? 'CONFLICT' : status >= 500 ? 'INTERNAL_ERROR' : 'INVALID_REQUEST',
