@@ -80,6 +80,12 @@ const router = createRouter({
       meta: { title: 'Planes SaaS', subtitle: 'Catalogo y módulos', roles: ['superadmin'] },
     },
     {
+      path: '/admin/saas/subscriptions',
+      name: 'saas-subscriptions',
+      component: () => import('../views/SaasSubscriptionsView.vue'),
+      meta: { title: 'Suscripciones SaaS', subtitle: 'Asignación y gestión de accesos', roles: ['superadmin'] },
+    },
+    {
       path: '/admin',
       component: AdminLayout,
       redirect: { name: 'dashboard' },
@@ -105,10 +111,22 @@ const router = createRouter({
           meta: { title: 'Publicidad', subtitle: 'Campañas públicas', roles: ['superadmin'] },
         },
         {
+          path: '/admin/donaciones',
+          name: 'donations',
+          component: () => import('../views/DonationsAdminView.vue'),
+          meta: { title: 'Donaciones', subtitle: 'Campaña pública y pagos', roles: ['superadmin'] },
+        },
+        {
           path: '/my-ads',
           name: 'my-ads',
           component: MyAdsView,
           meta: { title: 'Publicidad', subtitle: 'Campañas de mi congregación', roles: ['admin', 'superadmin'] },
+        },
+        {
+          path: '/social-media',
+          name: 'social-media',
+          component: () => import('../views/SocialPublishingView.vue'),
+          meta: { title: 'Contenido y redes sociales', subtitle: 'Publicaciones de la congregación', roles: ['admin', 'superadmin'], requiresSubscription: true },
         },
         ...modules.map((module) => ({
           path: `/${module.path}`,

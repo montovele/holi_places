@@ -45,6 +45,7 @@ async function signOut() {
     <div class="topbar-tools">
       <RouterLink v-if="auth.user?.role === 'superadmin'" class="superadmin-link" :to="{ name: 'organizations' }">Organizaciones</RouterLink>
       <RouterLink v-if="auth.user?.role === 'superadmin'" class="superadmin-link" :to="{ name: 'plans' }">Planes SaaS</RouterLink>
+      <RouterLink v-if="auth.user?.role === 'superadmin'" class="superadmin-link" :to="{ name: 'saas-subscriptions' }">Suscripciones</RouterLink>
       <RouterLink v-if="auth.user?.role === 'superadmin'" class="superadmin-link" :to="{ name: 'appearance' }">Marca y comunidad</RouterLink>
       <RouterLink v-if="['superadmin', 'admin'].includes(auth.user?.role)" class="superadmin-link" :to="{ name: 'team' }">Equipo</RouterLink>
       <span v-if="activeOrganizationName && auth.user?.role !== 'superadmin'" class="active-organization" :title="activeOrganizationName">
@@ -60,6 +61,7 @@ async function signOut() {
       <button
         class="api-status"
         :class="`api-${system.apiStatus}`"
+        :aria-label="system.apiStatus === 'online' ? 'API conectada' : system.apiStatus === 'checking' ? 'Conectando API' : 'API desconectada'"
         :title="system.apiError || (system.apiCheckedAt ? `Comprobada: ${new Date(system.apiCheckedAt).toLocaleTimeString()}` : 'Comprobando API')"
         @click="system.checkApi()"
       >

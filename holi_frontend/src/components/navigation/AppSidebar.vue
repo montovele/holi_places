@@ -20,6 +20,7 @@ import {
   UsersIcon,
   BookOpenIcon,
   SparklesIcon,
+  ShareIcon,
 } from '@heroicons/vue/24/outline'
 import modules from '../../modules/registry'
 import { useAuthStore } from '../../stores/auth'
@@ -75,9 +76,17 @@ const icons = {
         <MegaphoneIcon class="nav-icon" aria-hidden="true" />
         <span>Publicidad</span>
       </RouterLink>
+      <RouterLink v-if="auth.user?.role === 'superadmin'" class="nav-link" :to="{ name: 'donations' }" active-class="nav-link-active" @click="$emit('close')">
+        <HeartIcon class="nav-icon" aria-hidden="true" />
+        <span>Donaciones</span>
+      </RouterLink>
       <RouterLink v-if="['admin', 'superadmin'].includes(auth.user?.role)" class="nav-link" :to="{ name: 'my-ads' }" active-class="nav-link-active" @click="$emit('close')">
         <MegaphoneIcon class="nav-icon" aria-hidden="true" />
         <span>Mis anuncios</span>
+      </RouterLink>
+      <RouterLink v-if="['admin', 'superadmin'].includes(auth.user?.role)" class="nav-link" :to="{ name: 'social-media' }" active-class="nav-link-active" @click="$emit('close')">
+        <ShareIcon class="nav-icon" aria-hidden="true" />
+        <span>Redes sociales</span>
       </RouterLink>
       <template v-if="modulesEnabled">
         <RouterLink

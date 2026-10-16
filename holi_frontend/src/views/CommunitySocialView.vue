@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { ArrowRightIcon, BookOpenIcon, BuildingLibraryIcon, CalendarDaysIcon, GlobeAltIcon, HeartIcon, MapPinIcon, NewspaperIcon, SparklesIcon, UsersIcon } from '@heroicons/vue/24/outline'
-import { getPublicCommunity } from '../services/communityService'
+import { communityMediaSource, getPublicCommunity } from '../services/communityService'
 import { useAppearanceStore } from '../stores/appearance'
 import { usePublicAdRotation } from '../composables/usePublicAdRotation'
 import ScrollAdSlot from '../components/community/ScrollAdSlot.vue'
@@ -403,7 +403,8 @@ onMounted(loadCommunity)
         <div v-if="visiblePosts.length" class="stories-grid">
           <article v-for="post in visiblePosts.slice(0, 4)" :key="post.id" class="story-card">
             <div class="story-thumb">
-              <img :src="post.imageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80'" :alt="post.title" />
+              <video v-if="post.mediaType === 'video'" :src="communityMediaSource(post.mediaUrl || post.imageUrl)" controls playsinline :aria-label="post.title" />
+              <img v-else :src="communityMediaSource(post.mediaUrl || post.imageUrl) || post.imageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80'" :alt="post.title" />
             </div>
             <div class="story-copy">
               <p class="mini-label"><NewspaperIcon class="mini" /> {{ post.congregation }}</p>
@@ -952,7 +953,7 @@ onMounted(loadCommunity)
   height: 200px;
 }
 
-.story-thumb img {
+.story-thumb img, .story-thumb video {
   width: 100%;
   height: 100%;
   object-fit: cover;

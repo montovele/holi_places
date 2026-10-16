@@ -28,3 +28,17 @@ export const updateModuleRecord = async (moduleId, recordId, record) => {
 export const deleteModuleRecord = async (moduleId, recordId) => {
   await http.delete(`/modules/${moduleId}/${recordId}`)
 }
+
+export const createServiceSchedule = async (schedule) => {
+  const { data } = await http.post('/modules/events/schedules', schedule)
+  return data.schedule
+}
+
+export const updateServiceSchedule = async (scheduleId, schedule) => {
+  const { data } = await http.put(`/modules/events/schedules/${encodeURIComponent(scheduleId)}`, schedule)
+  return data.schedule
+}
+
+export const deleteServiceSchedule = async (scheduleId) => {
+  await http.delete(`/modules/events/schedules/${encodeURIComponent(scheduleId)}`)
+}

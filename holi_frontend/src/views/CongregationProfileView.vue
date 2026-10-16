@@ -1,8 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ArrowLeftIcon, ArrowRightIcon, CalendarDaysIcon, ClockIcon, GlobeAltIcon, MapPinIcon, NewspaperIcon, StarIcon, UsersIcon } from '@heroicons/vue/24/outline'
-import { getPublicCommunity } from '../services/communityService'
+import { ArrowLeftIcon, ArrowRightIcon, CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, GlobeAltIcon, MapPinIcon, NewspaperIcon, StarIcon, UsersIcon } from '@heroicons/vue/24/outline'
+import { communityMediaSource, getPublicCommunity } from '../services/communityService'
 import ScrollAdSlot from '../components/community/ScrollAdSlot.vue'
 import { usePublicAdRotation } from '../composables/usePublicAdRotation'
 
@@ -12,16 +12,60 @@ const community = ref({ congregations: [], events: [], posts: [], moduleUpdates:
 const { ads: liveAds } = usePublicAdRotation()
 const loading = ref(true)
 const errorMessage = ref('')
+const activeProfileSection = ref('agenda')
+const calendarMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+const selectedCalendarDate = ref(dateKey(new Date()))
 
 const congregation = computed(() => community.value.congregations.find((item) => item.id === route.params.congregationId))
 const congregationEvents = computed(() => community.value.events
   .filter((event) => event.locationId === route.params.congregationId)
   .sort((first, second) => new Date(first.startsAt) - new Date(second.startsAt)))
+const congregationSchedules = computed(() => (community.value.serviceSchedules || [])
+  .filter((schedule) => schedule.locationId === route.params.congregationId && schedule.status !== 'inactive'))
+const calendarTitle = computed(() => new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(calendarMonth.value))
+const calendarCells = computed(() => {
+  const monthStart = new Date(calendarMonth.value.getFullYear(), calendarMonth.value.getMonth(), 1)
+  const gridStart = new Date(monthStart)
+  gridStart.setDate(monthStart.getDate() - ((monthStart.getDay() + 6) % 7))
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart)
+    date.setDate(gridStart.getDate() + index)
+    const key = dateKey(date)
+    const activities = []
+    for (const schedule of congregationSchedules.value) {
+      if (Number(schedule.dayOfWeek) === date.getDay()) {
+        activities.push({
+          id: `${schedule.id}-${key}`,
+          title: schedule.title,
+          serviceType: schedule.serviceType,
+          startsAt: `${key}T${String(schedule.startsAt).slice(0, 5)}:00`,
+          endsAt: `${key}T${String(schedule.endsAt).slice(0, 5)}:00`,
+          location: schedule.location || congregation.value?.name,
+          description: schedule.description,
+          recurring: true,
+        })
+      }
+    }
+    for (const event of congregationEvents.value) {
+      if (dateKey(new Date(event.startsAt)) === key) {
+        activities.push({ ...event, serviceType: 'Evento', recurring: false })
+      }
+    }
+    activities.sort((first, second) => String(first.startsAt).localeCompare(String(second.startsAt)))
+    return { key, day: date.getDate(), currentMonth: date.getMonth() === calendarMonth.value.getMonth(), activities }
+  })
+})
+const selectedCalendarActivities = computed(() => calendarCells.value.find(({ key }) => key === selectedCalendarDate.value)?.activities || [])
+const calendarActivityCount = computed(() => calendarCells.value
+  .filter(({ currentMonth }) => currentMonth)
+  .reduce((count, cell) => count + cell.activities.length, 0))
 const congregationPosts = computed(() => community.value.posts
   .filter((post) => post.locationId === route.params.congregationId)
   .sort((first, second) => new Date(second.publishedAt) - new Date(first.publishedAt)))
 const congregationUpdates = computed(() => community.value.moduleUpdates
-  .filter((update) => update.organizationId === congregation.value?.organizationId)
+  .filter((update) => !update.synthetic
+    && congregation.value?.organizationId
+    && update.organizationId === congregation.value.organizationId)
   .sort((first, second) => new Date(second.recordDate || second.date || 0) - new Date(first.recordDate || first.date || 0)))
 
 const groupedUpdates = computed(() => {
@@ -38,7 +82,10 @@ const groupedUpdates = computed(() => {
   }))
 })
 
-const nextEvent = computed(() => congregationEvents.value[0])
+const nextEvent = computed(() => calendarCells.value
+  .flatMap((cell) => cell.activities)
+  .filter((activity) => Date.parse(activity.startsAt) >= Date.now())
+  .sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt))[0])
 const profileAds = computed(() => {
   const targetedAds = liveAds.value.filter((ad) => ad.placement === 'profile')
   const availableAds = targetedAds.length
@@ -54,6 +101,27 @@ const mapDestination = computed(() => {
     : [address, city].filter(Boolean).join(', ')
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`
 })
+
+function dateKey(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function changeCalendarMonth(offset) {
+  calendarMonth.value = new Date(calendarMonth.value.getFullYear(), calendarMonth.value.getMonth() + offset, 1)
+  selectedCalendarDate.value = dateKey(calendarMonth.value)
+}
+
+async function selectProfileSection(section) {
+  activeProfileSection.value = section
+  await nextTick()
+  document.getElementById(section === 'profile' ? 'perfil' : section)?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
+}
 
 function updateLabel(moduleId) {
   const labels = {
@@ -103,6 +171,7 @@ async function loadData(congregationId) {
     community.value = {
       congregations: [],
       events: [],
+      serviceSchedules: [],
       posts: [],
       moduleUpdates: [],
       ...response,
@@ -140,14 +209,18 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
     <main v-else class="profile-shell">
       <nav class="profile-nav" aria-label="Navegación de la congregación">
         <span class="profile-nav-label">Explora</span>
-        <a href="#perfil">Perfil</a><a href="#agenda">Agenda</a><a href="#areas">Áreas</a><a href="#historias">Historias</a>
+        <div class="profile-nav-tabs" role="tablist" aria-label="Contenido de la congregación">
+          <button type="button" role="tab" :aria-selected="activeProfileSection === 'agenda'" :class="{ active: activeProfileSection === 'agenda' }" @click="selectProfileSection('agenda')"><CalendarDaysIcon aria-hidden="true" /> Agenda</button>
+          <button type="button" role="tab" :aria-selected="activeProfileSection === 'areas'" :class="{ active: activeProfileSection === 'areas' }" @click="selectProfileSection('areas')"><UsersIcon aria-hidden="true" /> Áreas</button>
+          <button type="button" role="tab" :aria-selected="activeProfileSection === 'historias'" :class="{ active: activeProfileSection === 'historias' }" @click="selectProfileSection('historias')"><NewspaperIcon aria-hidden="true" /> Historias</button>
+        </div>
         <a class="profile-nav-directions" :href="mapDestination" target="_blank" rel="noopener noreferrer"><MapPinIcon aria-hidden="true" /> Cómo llegar</a>
       </nav>
 
       <div class="profile-content">
         <section id="perfil" class="hero-card profile-reveal">
           <div class="hero-visual">
-            <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1800&q=88" alt="Personas reunidas en una actividad comunitaria" fetchpriority="high" />
+            <img src="https://images.unsplash.com/photo-1438032005730-c779502df39b?auto=format&fit=crop&w=1800&q=88" alt="Interior de una iglesia preparado para la oración y la celebración comunitaria" fetchpriority="high" />
             <span class="location-badge"><MapPinIcon aria-hidden="true" />{{ congregation.city }}</span>
             <span class="hero-image-caption">COMUNIDAD ABIERTA <i></i> {{ congregation.city }}</span>
           </div>
@@ -156,11 +229,11 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
             <h1>{{ congregation.name }}</h1>
             <p class="lead">Encuentros, historias y actividades para conocer lo que sucede en esta comunidad y encontrar un espacio para participar.</p>
             <div class="hero-actions">
-              <a class="profile-button profile-button-primary" href="#agenda">Ver próximos encuentros <ArrowRightIcon aria-hidden="true" /></a>
+              <button class="profile-button profile-button-primary" type="button" @click="selectProfileSection('agenda')">Ver agenda y horarios <ArrowRightIcon aria-hidden="true" /></button>
               <a class="profile-button profile-button-secondary" :href="mapDestination" target="_blank" rel="noopener noreferrer"><MapPinIcon aria-hidden="true" /> Cómo llegar</a>
             </div>
             <div class="hero-metrics" aria-label="Resumen de la congregación">
-              <div><strong>{{ congregationEvents.length }}</strong><span>encuentros</span></div>
+              <div><strong>{{ congregationEvents.length + congregationSchedules.length }}</strong><span>eventos y horarios</span></div>
               <div><strong>{{ congregationPosts.length }}</strong><span>publicaciones</span></div>
               <div><strong>{{ congregationUpdates.length }}</strong><span>aportes públicos</span></div>
             </div>
@@ -183,43 +256,83 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
             <div class="panel-title"><span class="panel-icon"><CalendarDaysIcon aria-hidden="true" /></span><h2>Lo próximo</h2></div>
             <template v-if="nextEvent"><h3>{{ nextEvent.title }}</h3><p>{{ formatEventDate(nextEvent.startsAt) }} · {{ formatHour(nextEvent.startsAt) }}</p></template>
             <p v-else>No hay encuentros públicos programados.</p>
-            <a class="text-action" href="#agenda">Ver agenda <ArrowRightIcon aria-hidden="true" /></a>
+            <button class="text-action" type="button" @click="selectProfileSection('agenda')">Ver agenda <ArrowRightIcon aria-hidden="true" /></button>
           </article>
           <article class="info-panel info-community">
             <div class="panel-title"><span class="panel-icon"><UsersIcon aria-hidden="true" /></span><h2>Vida compartida</h2></div>
             <p>Información autorizada sobre actividades, recursos y comunicaciones de la congregación.</p>
-            <a class="text-action" href="#areas">Conocer las áreas <ArrowRightIcon aria-hidden="true" /></a>
+            <button class="text-action" type="button" @click="selectProfileSection('areas')">Conocer las áreas <ArrowRightIcon aria-hidden="true" /></button>
           </article>
         </section>
 
-        <ScrollAdSlot :ads="profileAds" placement="profile" :slot-index="1" :slot-count="3" :slot-seed="1" />
-
-        <section id="agenda" class="content-section profile-reveal">
-          <div class="section-heading"><div><p class="section-kicker">PARTICIPA</p><h2>Agenda pública</h2></div><span>{{ congregationEvents.length }} {{ congregationEvents.length === 1 ? 'encuentro próximo' : 'encuentros próximos' }}</span></div>
-          <div v-if="congregationEvents.length" class="events-list">
-            <article v-for="event in congregationEvents" :key="event.id" class="event-card">
-              <div class="event-date"><span>{{ formatDate(event.startsAt, { month: 'short' }).replace('.', '') }}</span><strong>{{ new Date(event.startsAt).getDate() }}</strong></div>
-              <div class="event-details"><p class="event-time"><ClockIcon aria-hidden="true" />{{ formatEventDate(event.startsAt) }} · {{ formatHour(event.startsAt) }}</p><h3>{{ event.title }}</h3><p>{{ event.description }}</p><small>{{ event.attendeeCount || 0 }} {{ event.attendeeCount === 1 ? 'persona inscrita' : 'personas inscritas' }}</small></div>
-            </article>
+        <section v-if="activeProfileSection === 'agenda'" id="agenda" class="content-section profile-reveal" role="tabpanel" aria-label="Agenda y horarios públicos">
+          <div class="section-heading"><div><p class="section-kicker">PARTICIPA</p><h2>Agenda pública</h2></div><span>{{ calendarActivityCount }} {{ calendarActivityCount === 1 ? 'actividad este mes' : 'actividades este mes' }}</span></div>
+          <div v-if="congregationSchedules.length || congregationEvents.length" class="public-calendar">
+            <div class="public-calendar-heading">
+              <button type="button" class="public-calendar-nav" aria-label="Mes anterior" @click="changeCalendarMonth(-1)"><ChevronLeftIcon /></button>
+              <h3>{{ calendarTitle }}</h3>
+              <button type="button" class="public-calendar-nav" aria-label="Mes siguiente" @click="changeCalendarMonth(1)"><ChevronRightIcon /></button>
+            </div>
+            <div class="public-calendar-weekdays" aria-hidden="true">
+              <span v-for="day in ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']" :key="day">{{ day }}</span>
+            </div>
+            <div class="public-calendar-grid" role="grid" :aria-label="`Calendario de actividades: ${calendarTitle}`">
+              <button
+                v-for="cell in calendarCells"
+                :key="cell.key"
+                type="button"
+                role="gridcell"
+                class="public-calendar-day"
+                :class="{ 'public-calendar-day-outside': !cell.currentMonth, 'public-calendar-day-selected': selectedCalendarDate === cell.key, 'public-calendar-day-has-activities': cell.activities.length }"
+                :aria-label="`${cell.key}, ${cell.activities.length} ${cell.activities.length === 1 ? 'actividad' : 'actividades'}`"
+                :aria-pressed="selectedCalendarDate === cell.key"
+                @click="selectedCalendarDate = cell.key"
+              >
+                <span>{{ cell.day }}</span>
+                <i v-if="cell.activities.length" aria-hidden="true">{{ cell.activities.length }}</i>
+              </button>
+            </div>
+            <div class="public-calendar-legend"><span><i class="calendar-dot calendar-dot-recurring"></i>Servicio o reunión recurrente</span><span><i class="calendar-dot calendar-dot-event"></i>Evento especial</span></div>
+            <div class="public-calendar-activities">
+              <h3>{{ formatDate(`${selectedCalendarDate}T12:00:00`, { weekday: 'long', day: 'numeric', month: 'long' }) }}</h3>
+              <article v-for="activity in selectedCalendarActivities" :key="activity.id" class="event-card">
+                <div class="event-date"><span>{{ activity.serviceType }}</span><strong><ClockIcon aria-hidden="true" /></strong></div>
+                <div class="event-details">
+                  <p class="event-time">{{ formatHour(activity.startsAt) }}<template v-if="activity.endsAt">–{{ formatHour(activity.endsAt) }}</template> · {{ activity.location || congregation.name }}</p>
+                  <h3>{{ activity.title }}</h3>
+                  <p>{{ activity.description || (activity.recurring ? 'Horario semanal de la congregación.' : 'Actividad programada.') }}</p>
+                  <small v-if="!activity.recurring">{{ activity.attendeeCount || 0 }} {{ activity.attendeeCount === 1 ? 'persona inscrita' : 'personas inscritas' }}</small>
+                </div>
+              </article>
+              <div v-if="!selectedCalendarActivities.length" class="empty-box"><CalendarDaysIcon aria-hidden="true" /><span>No hay actividades programadas para este día.</span></div>
+            </div>
           </div>
-          <div v-else class="empty-box"><CalendarDaysIcon aria-hidden="true" /><span>Todavía no hay encuentros públicos para esta congregación.</span></div>
+          <div v-else class="empty-box"><CalendarDaysIcon aria-hidden="true" /><span>Todavía no hay horarios públicos o encuentros programados para esta congregación.</span></div>
         </section>
 
-        <ScrollAdSlot :ads="profileAds" placement="profile" :slot-index="2" :slot-count="3" :slot-seed="2" />
-
-        <section id="areas" class="content-section profile-reveal">
+        <section v-else-if="activeProfileSection === 'areas'" id="areas" class="content-section profile-reveal" role="tabpanel" aria-label="Áreas públicas de la congregación">
           <div class="section-heading"><div><p class="section-kicker">LO QUE COMPARTIMOS</p><h2>Áreas públicas</h2></div><span>{{ groupedUpdates.length }} {{ groupedUpdates.length === 1 ? 'área' : 'áreas' }}</span></div>
-          <div v-if="groupedUpdates.length" class="areas-grid">
-            <article v-for="section in groupedUpdates" :key="section.moduleId" class="area-card"><h3>{{ section.label }}</h3><ul><li v-for="item in section.items.slice(0, 4)" :key="item.id"><strong>{{ item.title }}</strong><span>{{ item.description || item.detail || 'Contenido publicado' }}</span></li></ul></article>
+          <div v-if="groupedUpdates.length" class="areas-grid profile-horizontal-track" aria-label="Desliza horizontalmente para explorar las áreas">
+            <article v-for="section in groupedUpdates" :key="section.moduleId" class="area-card">
+              <h3>{{ section.label }}</h3>
+              <div class="area-items-track">
+                <article v-for="item in section.items.slice(0, 4)" :key="item.id" class="area-item-card">
+                  <strong>{{ item.title }}</strong><span>{{ item.description || item.detail || 'Contenido publicado' }}</span>
+                </article>
+              </div>
+            </article>
           </div>
           <div v-else class="empty-box"><UsersIcon aria-hidden="true" /><span>No hay contenidos públicos publicados en esta congregación.</span></div>
         </section>
 
-        <section id="historias" class="content-section profile-reveal">
+        <section v-else id="historias" class="content-section profile-reveal" role="tabpanel" aria-label="Publicaciones e historias de la congregación">
           <div class="section-heading"><div><p class="section-kicker">VOCES DE LA COMUNIDAD</p><h2>Publicaciones y actividades</h2></div><span>{{ congregationPosts.length }} {{ congregationPosts.length === 1 ? 'historia' : 'historias' }}</span></div>
-          <div v-if="congregationPosts.length" class="posts-grid">
+          <div v-if="congregationPosts.length" class="posts-grid profile-horizontal-track" aria-label="Desliza horizontalmente para explorar las publicaciones">
             <article v-for="post in congregationPosts" :key="post.id" class="post-card">
-              <div class="post-image-wrap"><img :src="post.imageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80'" :alt="post.title" loading="lazy" /></div>
+              <div class="post-image-wrap">
+                <video v-if="post.mediaType === 'video'" :src="communityMediaSource(post.mediaUrl || post.imageUrl)" controls playsinline :aria-label="post.title" />
+                <img v-else :src="communityMediaSource(post.mediaUrl || post.imageUrl) || post.imageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80'" :alt="post.title" loading="lazy" />
+              </div>
               <div class="post-copy"><div class="post-meta"><span>{{ post.type === 'activity' ? 'Actividad' : 'Publicación' }}</span><time>{{ formatDate(post.publishedAt) }}</time></div><h3>{{ post.title }}</h3><p>{{ post.excerpt || post.body }}</p></div>
             </article>
           </div>
@@ -455,6 +568,117 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
   gap: 16px;
 }
 
+.public-calendar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr);
+  gap: 22px;
+  padding: 20px;
+  border: 1px solid var(--profile-line);
+  background: rgba(250, 251, 247, .82);
+}
+
+.public-calendar-heading {
+  display: flex;
+  grid-column: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.public-calendar-heading h3 {
+  margin: 0;
+  color: var(--profile-ink);
+  font: 700 17px 'Manrope', sans-serif;
+  text-transform: capitalize;
+}
+
+.public-calendar-nav {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--profile-line);
+  border-radius: 4px;
+  color: var(--profile-green);
+  background: #fff;
+  cursor: pointer;
+}
+
+.public-calendar-nav:hover { border-color: #9db69d; background: #f1f5ee; }
+.public-calendar-nav svg { width: 17px; height: 17px; }
+
+.public-calendar-weekdays,
+.public-calendar-grid {
+  display: grid;
+  grid-column: 1;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.public-calendar-weekdays {
+  padding: 13px 0 7px;
+  color: var(--profile-muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.public-calendar-grid { border-top: 1px solid var(--profile-line); border-left: 1px solid var(--profile-line); }
+
+.public-calendar-day {
+  display: flex;
+  min-width: 0;
+  min-height: 57px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 7px;
+  border: 0;
+  border-right: 1px solid var(--profile-line);
+  border-bottom: 1px solid var(--profile-line);
+  color: var(--profile-ink);
+  background: #fff;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.public-calendar-day:hover { background: #f3f6f1; }
+.public-calendar-day-outside { color: #aeb8ae; background: #f7f8f5; }
+.public-calendar-day-selected { position: relative; z-index: 1; outline: 2px solid var(--profile-green); outline-offset: -2px; background: #edf4eb; }
+.public-calendar-day i { display: grid; min-width: 17px; height: 17px; place-items: center; border-radius: 50%; color: #fff; background: var(--profile-green); font-size: 8px; font-style: normal; font-weight: 800; }
+
+.public-calendar-legend {
+  display: flex;
+  grid-column: 1;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 11px;
+  color: var(--profile-muted);
+  font-size: 9px;
+}
+
+.public-calendar-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.calendar-dot { width: 8px; height: 8px; border-radius: 50%; }
+.calendar-dot-recurring { background: var(--profile-green); }
+.calendar-dot-event { background: var(--profile-coral); }
+
+.public-calendar-activities {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  min-width: 0;
+  padding-left: 19px;
+  border-left: 1px solid var(--profile-line);
+}
+
+.public-calendar-activities > h3 { margin: 0 0 14px; color: var(--profile-ink); font: 700 14px 'Manrope', sans-serif; text-transform: capitalize; }
+.public-calendar-activities .event-card { grid-template-columns: 70px minmax(0, 1fr); gap: 11px; margin-bottom: 10px; padding: 11px; }
+.public-calendar-activities .event-date { min-height: 58px; padding: 7px; }
+.public-calendar-activities .event-date span { text-align: center; }
+.public-calendar-activities .event-date strong svg { width: 16px; height: 16px; }
+.public-calendar-activities .event-details h3 { font-size: 12px; }
+.public-calendar-activities .event-details p { font-size: 10px; }
+.public-calendar-activities .empty-box { min-height: 90px; padding: 12px; font-size: 10px; }
+
 .event-card {
   display: grid;
   grid-template-columns: 110px 1fr;
@@ -538,7 +762,7 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
   height: 220px;
 }
 
-.post-image-wrap img {
+.post-image-wrap img, .post-image-wrap video {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -722,7 +946,7 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
 .area-card li span { font-size: 10px; }
 .post-card { border: 1px solid var(--profile-line); border-radius: 4px; background: rgba(255,255,255,.76); box-shadow: none; transition: transform 180ms ease, border-color 180ms ease; }
 .post-image-wrap { height: clamp(170px, 22vw, 240px); overflow: hidden; background: #dfe8df; }
-.post-image-wrap img { transition: transform 500ms ease; }
+.post-image-wrap img, .post-image-wrap video { transition: transform 500ms ease; }
 .post-card:hover .post-image-wrap img { transform: scale(1.035); }
 .post-copy { padding: 16px 18px 19px; }
 .post-meta { color: var(--profile-muted); font-size: 9px; }
@@ -739,6 +963,30 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
 .profile-footer a { display: inline-flex; align-items: center; gap: 8px; color: #56695b; font-size: 10px; font-weight: 800; text-decoration: none; }
 .profile-footer a:hover { color: var(--profile-coral); }
 .profile-footer svg { width: 14px; height: 14px; }
+.profile-nav-tabs { display: flex; align-items: center; gap: 5px; }
+.profile-nav-tabs button { display: inline-flex; min-height: 35px; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid transparent; border-radius: 4px; color: #596a5d; background: transparent; cursor: pointer; font: 700 10px 'DM Sans', sans-serif; transition: color 150ms ease, background 150ms ease, border-color 150ms ease; }
+.profile-nav-tabs button svg { width: 14px; height: 14px; }
+.profile-nav-tabs button:hover { border-color: #d8e2d4; color: var(--profile-green); background: rgba(255,255,255,.7); }
+.profile-nav-tabs button.active, .profile-nav-tabs button[aria-selected="true"] { border-color: #d3dfd0; color: var(--profile-green); background: #fff; box-shadow: inset 0 -2px #b99a62; }
+.profile-nav-tabs button:focus-visible, .profile-button:focus-visible, .text-action:focus-visible { outline: 2px solid #ad8548; outline-offset: 3px; }
+.profile-nav-tabs button.active svg { color: var(--profile-coral); }
+.text-action { padding: 0; border: 0; background: transparent; cursor: pointer; font-family: inherit; }
+.content-section { min-height: 360px; }
+.profile-horizontal-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 34%); grid-template-columns: none; align-items: stretch; gap: 13px; overflow-x: auto; overflow-y: hidden; padding: 3px 3px 14px; scroll-padding-inline: 3px; scroll-snap-type: x mandatory; scrollbar-color: #aebda8 #eaf0e7; scrollbar-width: thin; }
+.profile-horizontal-track::-webkit-scrollbar { height: 8px; }
+.profile-horizontal-track::-webkit-scrollbar-track { border-radius: 8px; background: #eaf0e7; }
+.profile-horizontal-track::-webkit-scrollbar-thumb { border: 2px solid #eaf0e7; border-radius: 8px; background: #9cad94; }
+.profile-horizontal-track > * { min-width: 0; scroll-snap-align: start; }
+.area-card { display: flex; min-height: 220px; flex-direction: column; }
+.area-items-track { display: flex; min-width: 0; gap: 8px; overflow-x: auto; margin-top: auto; padding: 3px 2px 10px; scroll-snap-type: x mandatory; scrollbar-color: #c2ccb9 transparent; scrollbar-width: thin; }
+.area-item-card { display: grid; min-width: min(210px, 82%); align-content: start; gap: 7px; padding: 12px; border: 1px solid #e5ebe2; background: #fff; scroll-snap-align: start; }
+.area-item-card strong { color: var(--profile-ink); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
+.area-item-card span { color: var(--profile-muted); font-size: 9px; line-height: 1.5; overflow-wrap: anywhere; }
+.posts-grid.profile-horizontal-track { grid-auto-columns: minmax(280px, 36%); }
+.post-card { min-width: 0; scroll-snap-align: start; }
+.post-copy p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+.info-grid { scroll-snap-type: x proximity; }
+.info-panel { scroll-snap-align: start; }
 .profile-reveal { animation: profile-enter 650ms cubic-bezier(.2,.7,.2,1) both; }
 .info-grid.profile-reveal { animation-delay: 90ms; }
 @keyframes profile-enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
@@ -753,16 +1001,23 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
   .info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .info-community { grid-column: 1 / -1; }
   .profile-header { padding-inline: 24px; }
+  .public-calendar { grid-template-columns: 1fr; }
+  .public-calendar-activities { grid-column: 1; grid-row: auto; padding: 17px 0 0; border-top: 1px solid var(--profile-line); border-left: 0; }
+  .profile-horizontal-track { grid-auto-columns: minmax(260px, 48%); }
+  .posts-grid.profile-horizontal-track { grid-auto-columns: minmax(270px, 55%); }
 }
 
 @media (max-width: 620px) {
   .profile-header { min-height: 58px; padding: 9px 17px; }
   .profile-header-brand { font-size: 13px; }
   .back-link { font-size: 10px; }
-  .profile-nav { justify-content: flex-start; gap: 21px; overflow-x: auto; padding-inline: 17px; scrollbar-width: none; }
+  .profile-nav { justify-content: space-between; gap: 10px; overflow-x: auto; padding-inline: 17px; scrollbar-width: none; }
   .profile-nav::-webkit-scrollbar { display: none; }
   .profile-nav-label { display: none; }
-  .profile-nav a { flex: 0 0 auto; font-size: 10px; }
+  .profile-nav-tabs { flex: 0 0 auto; gap: 2px; }
+  .profile-nav-tabs button { min-height: 34px; gap: 4px; padding: 0 8px; font-size: 9px; }
+  .profile-nav-tabs button svg { width: 13px; height: 13px; }
+  .profile-nav > a { flex: 0 0 auto; font-size: 9px; }
   .profile-content { padding: 16px 17px 0; }
   .hero-card { display: flex; flex-direction: column; }
   .hero-visual { min-height: 245px; height: 245px; }
@@ -779,9 +1034,9 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
   .hero-metrics div { padding-inline: 8px; }
   .hero-metrics strong { font-size: 20px; }
   .hero-metrics span { font-size: 8px; }
-  .info-grid { grid-template-columns: 1fr; gap: 9px; margin-top: 20px; }
+  .info-grid { display: grid; grid-auto-columns: minmax(245px, 82%); grid-auto-flow: column; grid-template-columns: none; gap: 9px; overflow-x: auto; margin-top: 20px; padding: 2px 2px 10px; scroll-snap-type: x mandatory; scrollbar-color: #aebda8 #eaf0e7; scrollbar-width: thin; }
   .info-community { grid-column: auto; }
-  .info-panel { padding: 16px; }
+  .info-panel { padding: 16px; scroll-snap-align: start; }
   :deep(.community-ad-slot) { margin: 20px 0; }
   .content-section { margin-top: 14px; padding-block: 22px; }
   .section-heading { align-items: flex-end; gap: 8px; }
@@ -790,7 +1045,17 @@ watch(() => route.params.congregationId, loadData, { immediate: true })
   .event-card { grid-template-columns: 58px minmax(0, 1fr); gap: 12px; padding: 11px; }
   .event-date { min-height: 69px; }
   .event-date strong { font-size: 25px; }
-  .areas-grid, .posts-grid { grid-template-columns: 1fr; }
+  .public-calendar { gap: 15px; padding: 12px; }
+  .public-calendar-day { min-height: 43px; padding: 5px 4px; font-size: 10px; }
+  .public-calendar-day i { min-width: 15px; height: 15px; font-size: 7px; }
+  .public-calendar-weekdays { font-size: 8px; }
+  .public-calendar-legend { gap: 9px; font-size: 8px; }
+  .public-calendar-activities .event-card { grid-template-columns: 50px minmax(0, 1fr); gap: 9px; padding: 8px; }
+  .public-calendar-activities .event-date { min-height: 54px; }
+  .profile-horizontal-track { grid-auto-columns: minmax(250px, 86%); gap: 10px; }
+  .posts-grid.profile-horizontal-track { grid-auto-columns: minmax(260px, 88%); }
+  .content-section { min-height: 300px; }
+  .section-heading h2 { font-size: 27px; }
   .post-image-wrap { height: 205px; }
   .profile-footer { margin-top: 20px; padding: 17px; }
 }

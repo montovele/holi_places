@@ -1,6 +1,6 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -8,27 +8,37 @@ import {
   BookOpenIcon,
   BuildingLibraryIcon,
   CalendarDaysIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ClockIcon,
   GlobeAltIcon,
   HeartIcon,
   MapPinIcon,
+  PhotoIcon,
   SparklesIcon,
   StarIcon,
+  ShieldCheckIcon,
   UsersIcon,
   XMarkIcon,
 } from '@heroicons/vue/24/outline'
-import { getPublicCommunity } from '../services/communityService'
+import { communityMediaSource, getPublicCommunity, getPublicCommunityPost } from '../services/communityService'
 import { getBrowserCoordinates } from '../modules/locationFilters'
 import { usePublicAdRotation } from '../composables/usePublicAdRotation'
 import { useAuthStore } from '../stores/auth'
 import { useAppearanceStore } from '../stores/appearance'
+import {
+  createDonationCheckout,
+  getPublicDonationCampaign,
+  getPublicDonationPaymentStatus,
+} from '../services/donationsService'
 import ScrollAdSlot from '../components/community/ScrollAdSlot.vue'
 import CommunityMapSection from '../components/community/CommunityMapSection.vue'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const appearance = useAppearanceStore()
-const community = ref({ congregations: [], events: [], posts: [], moduleUpdates: [], ads: [], syntheticFixturesEnabled: false })
+const community = ref({ congregations: [], events: [], serviceSchedules: [], posts: [], moduleUpdates: [], ads: [], syntheticFixturesEnabled: false })
 const { ads: liveAds } = usePublicAdRotation()
 const loading = ref(true)
 const errorMessage = ref('')
@@ -36,12 +46,38 @@ const selectedCongregation = ref('all')
 const publicationType = ref('all')
 const selectedPost = ref(null)
 const postDialog = ref(null)
+const storySlider = ref(null)
+const storySliderActiveIndex = ref(0)
+const storySliderCanGoPrevious = ref(false)
+const storySliderCanGoNext = ref(false)
+const donationCampaign = ref(null)
+const selectedDonationAmount = ref(null)
+const donationBusy = ref(false)
+const donationError = ref('')
+const donationLoadError = ref('')
+const donationPaymentStatus = ref('')
+const loadingLinkedPostId = ref('')
 const selectedLocationId = ref('')
 const selectedCommunityArea = ref('all')
 const areaSearchQuery = ref('')
+const areaTypeFilter = ref('all')
+const areaStatusFilter = ref('all')
+const areaDateRange = ref('all')
+const areaSortOrder = ref('recent')
+const communityAreaPage = ref(1)
+const communityAreaPageSize = 9
 const publicScrollZoom = ref(false)
+const calendarMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+const selectedCalendarDate = ref(dateKey(new Date()))
 const managementRoute = computed(() => auth.user ? { name: 'dashboard' } : { name: 'login' })
 const managementLabel = computed(() => auth.user ? 'Panel de gestión' : 'Iniciar sesión')
+const donationCheckoutStatus = computed(() => (
+  route.query.donation === 'success' && donationPaymentStatus.value === 'paid' ? 'Gracias por tu donación. El pago se confirmó correctamente.'
+    : route.query.donation === 'success' && ['failed', 'expired'].includes(donationPaymentStatus.value) ? 'El pago no se completó. Puedes intentarlo de nuevo cuando quieras.'
+      : route.query.donation === 'success' ? 'Gracias por tu donación. Stripe está confirmando el pago.'
+    : route.query.donation === 'cancelled' ? 'El pago se canceló y no se realizó ningún cargo.'
+      : ''
+))
 const brandIcons = { church: BuildingLibraryIcon, book: BookOpenIcon, heart: HeartIcon, community: GlobeAltIcon, light: SparklesIcon }
 const appearanceStyle = computed(() => ({
   '--community-forest': appearance.settings.colors.primary,
@@ -79,6 +115,69 @@ const selectedCongregationEventList = computed(() => {
   ))
   return [...realEvents, ...syntheticEvents].sort((first, second) => new Date(first.startsAt) - new Date(second.startsAt))
 })
+const visibleServiceSchedules = computed(() => (community.value.serviceSchedules || [])
+  .filter((schedule) => schedule.status === 'active'
+    && (selectedCongregation.value === 'all' || schedule.locationId === selectedCongregation.value)))
+const calendarCells = computed(() => {
+  const monthStart = new Date(calendarMonth.value.getFullYear(), calendarMonth.value.getMonth(), 1)
+  const gridStart = new Date(monthStart)
+  gridStart.setDate(monthStart.getDate() - ((monthStart.getDay() + 6) % 7))
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart)
+    date.setDate(gridStart.getDate() + index)
+    const key = dateKey(date)
+    const activities = []
+    for (const schedule of visibleServiceSchedules.value) {
+      if (Number(schedule.dayOfWeek) === date.getDay()) {
+        const startsAt = String(schedule.startsAt).slice(0, 5)
+        activities.push({
+          id: `${schedule.id}-${key}`,
+          title: schedule.title,
+          activityType: schedule.serviceType || 'Servicio',
+          dateLabel: formatCalendarDate(date),
+          timeLabel: formatServiceTime(startsAt),
+          sortTime: startsAt,
+          location: schedule.congregation,
+          description: schedule.description,
+          recurring: true,
+        })
+      }
+    }
+    for (const event of visibleEvents.value) {
+      if (calendarEventDateKey(event.startsAt) === key) {
+        activities.push({
+          id: event.id,
+          title: event.title,
+          activityType: 'Encuentro',
+          dateLabel: formatEventDate(event.startsAt),
+          timeLabel: formatEventTime(event.startsAt),
+          sortTime: calendarEventTimeKey(event.startsAt),
+          location: event.congregation,
+          description: event.description,
+          recurring: false,
+          synthetic: event.synthetic,
+        })
+      }
+    }
+    activities.sort((first, second) => first.sortTime.localeCompare(second.sortTime))
+    return {
+      key,
+      day: date.getDate(),
+      currentMonth: date.getMonth() === calendarMonth.value.getMonth()
+        && date.getFullYear() === calendarMonth.value.getFullYear(),
+      activities,
+    }
+  })
+})
+const selectedCalendarActivities = computed(() => calendarCells.value
+  .find(({ key }) => key === selectedCalendarDate.value)?.activities || [])
+const calendarMonthActivityCount = computed(() => calendarCells.value
+  .filter(({ currentMonth }) => currentMonth)
+  .reduce((total, cell) => total + cell.activities.length, 0))
+const calendarMonthTitle = computed(() => new Intl.DateTimeFormat('es-MX', {
+  month: 'long',
+  year: 'numeric',
+}).format(calendarMonth.value))
 const selectedCongregationPostList = computed(() => {
   if (!selectedCongregationDetail.value) return []
   return community.value.posts
@@ -106,36 +205,22 @@ const visiblePosts = computed(() => community.value.posts.filter((post) => (
   (selectedCongregation.value === 'all' || post.locationId === selectedCongregation.value)
   && (publicationType.value === 'all' || post.type === publicationType.value)
 )))
+const visibleActivityMedia = computed(() => community.value.posts.filter((post) => (
+  post.mediaUrl
+  && ['image', 'video'].includes(post.mediaType)
+  && (post.type === 'activity' || post.mediaType === 'video')
+  && (selectedCongregation.value === 'all' || post.locationId === selectedCongregation.value)
+)))
 const selectedOrganizationId = computed(() => community.value.congregations
   .find(({ id }) => id === selectedCongregation.value)?.organizationId)
 const visibleModuleUpdates = computed(() => community.value.moduleUpdates.filter((update) => (
   selectedCongregation.value === 'all'
   || (update.synthetic
     ? update.congregationId === selectedCongregation.value
-    : update.organizationId === selectedOrganizationId.value)
+    : (selectedOrganizationId.value
+      ? update.organizationId === selectedOrganizationId.value
+      : update.congregation === community.value.congregations.find(({ id }) => id === selectedCongregation.value)?.name))
 )))
-const groupItemsByOrganization = (items = []) => {
-  const grouped = new Map()
-  for (const item of items) {
-    const organizationName = item.congregation || item.name || 'Congregación sin nombre'
-    if (!grouped.has(organizationName)) {
-      grouped.set(organizationName, { name: organizationName, items: [] })
-    }
-    grouped.get(organizationName).items.push(item)
-  }
-
-  return [...grouped.values()]
-    .map((group) => ({
-      ...group,
-      items: [...group.items].sort((first, second) => {
-        const firstDate = new Date(first.date || first.publishedAt || first.startsAt || first.recordDate || 0).getTime()
-        const secondDate = new Date(second.date || second.publishedAt || second.startsAt || second.recordDate || 0).getTime()
-        return secondDate - firstDate
-      }),
-    }))
-    .sort((first, second) => first.name.localeCompare(second.name, 'es-MX'))
-}
-
 const communityAreaSections = computed(() => {
   const updateSections = ['members', 'reservations', 'groups', 'attendance', 'resources', 'communications', 'reports', 'settings'].map((moduleId) => ({
     id: moduleId,
@@ -184,14 +269,13 @@ const communityAreaSections = computed(() => {
   ].map((section) => ({
     ...section,
     count: section.items.length,
-    organizationGroups: groupItemsByOrganization(section.items),
   }))
 })
 const communityAreas = computed(() => [
   {
     id: 'all',
-    label: 'Todo el tablero',
-    description: 'Agenda, sedes y contenido publicado',
+    label: 'Destacados',
+    description: 'Lo más reciente de la comunidad',
     count: communityAreaSections.value.reduce((total, section) => total + section.count, 0),
   },
   ...communityAreaSections.value.map(({ id, label, count }) => ({
@@ -201,37 +285,86 @@ const communityAreas = computed(() => [
     description: communityAreaDescriptions[id] || 'Contenido compartido por la congregación',
   })),
 ])
-const visibleCommunityAreaSections = computed(() => communityAreaSections.value
-  .filter(({ id, count }) => selectedCommunityArea.value === 'all' ? count > 0 : id === selectedCommunityArea.value)
-  .map((section) => {
-    const query = areaSearchQuery.value.trim().toLowerCase()
-    const organizationGroups = section.organizationGroups
-      .map((group) => ({
-        ...group,
-        items: query
-          ? group.items.filter((entry) => {
-              const haystack = [
-                entry.title,
-                entry.description,
-                entry.congregation,
-                entry.name,
-                entry.status,
-                entry.detail,
-                areaRecordType(section.id, entry),
-              ].filter(Boolean).join(' ').toLowerCase()
-              return haystack.includes(query)
-            })
-          : group.items,
-      }))
-      .filter((group) => group.items.length > 0)
+const communityAreaCandidates = computed(() => {
+  const selectedSection = communityAreaSections.value
+    .filter(({ id }) => selectedCommunityArea.value === 'all' || id === selectedCommunityArea.value)
+  const selectedCongregationRecord = community.value.congregations
+    .find(({ id }) => id === selectedCongregation.value)
+  const congregationName = selectedCongregationRecord?.name?.toLocaleLowerCase('es-MX')
 
-    return {
-      ...section,
-      count: organizationGroups.reduce((total, group) => total + group.items.length, 0),
-      organizationGroups,
-    }
-  })
-  .filter((section) => section.count > 0))
+  return selectedSection.flatMap((section) => section.items.map((entry) => ({
+    ...entry,
+    areaId: section.id,
+    areaLabel: section.label,
+    recordType: areaRecordType(section.id, entry),
+  })))
+    .filter((entry) => {
+      if (selectedCongregationRecord) {
+        const matchesCongregation = entry.locationId === selectedCongregationRecord.id
+          || entry.congregationId === selectedCongregationRecord.id
+          || (selectedCongregationRecord.organizationId && entry.organizationId === selectedCongregationRecord.organizationId)
+          || (entry.congregation || entry.name || '').toLocaleLowerCase('es-MX') === congregationName
+        if (!matchesCongregation) return false
+      }
+      return true
+    })
+})
+const communityAreaTypes = computed(() => [...new Set(communityAreaCandidates.value.map(({ recordType }) => recordType))]
+  .sort((first, second) => first.localeCompare(second, 'es-MX')))
+const communityAreaStatuses = computed(() => [...new Set(communityAreaCandidates.value.map(({ status }) => status).filter(Boolean))]
+  .sort((first, second) => first.localeCompare(second, 'es-MX')))
+const communityAreaEntries = computed(() => {
+  const query = areaSearchQuery.value.trim().toLocaleLowerCase('es-MX')
+  const dateLimit = areaDateRange.value === 'all'
+    ? null
+    : Date.now() - Number(areaDateRange.value) * 24 * 60 * 60 * 1000
+
+  return communityAreaCandidates.value
+    .filter((entry) => {
+      if (areaTypeFilter.value !== 'all' && entry.recordType !== areaTypeFilter.value) return false
+      if (areaStatusFilter.value !== 'all' && entry.status !== areaStatusFilter.value) return false
+      if (dateLimit !== null) {
+        const timestamp = Date.parse(entry.date || entry.publishedAt || entry.startsAt || entry.recordDate || '')
+        if (!Number.isFinite(timestamp) || timestamp < dateLimit) return false
+      }
+      if (!query) return true
+      const content = [
+        entry.title,
+        entry.description,
+        entry.congregation,
+        entry.name,
+        entry.status,
+        entry.detail,
+        entry.areaLabel,
+        entry.recordType,
+      ].filter(Boolean).join(' ').toLocaleLowerCase('es-MX')
+      return content.includes(query)
+    })
+    .sort((first, second) => {
+      if (areaSortOrder.value === 'title') return (first.title || '').localeCompare(second.title || '', 'es-MX')
+      if (areaSortOrder.value === 'congregation') return (first.congregation || first.name || '').localeCompare(second.congregation || second.name || '', 'es-MX')
+      const firstDate = Date.parse(first.date || first.publishedAt || first.startsAt || first.recordDate || '') || 0
+      const secondDate = Date.parse(second.date || second.publishedAt || second.startsAt || second.recordDate || '') || 0
+      return areaSortOrder.value === 'oldest' ? firstDate - secondDate : secondDate - firstDate
+    })
+})
+const communityAreaPages = computed(() => Math.max(1, Math.ceil(communityAreaEntries.value.length / communityAreaPageSize)))
+const paginatedCommunityAreaEntries = computed(() => {
+  const start = (communityAreaPage.value - 1) * communityAreaPageSize
+  return communityAreaEntries.value.slice(start, start + communityAreaPageSize)
+})
+const communityAreaModulesCount = computed(() => communityAreaSections.value.filter(({ count }) => count > 0).length)
+const communityAreaRangeStart = computed(() => communityAreaEntries.value.length
+  ? (communityAreaPage.value - 1) * communityAreaPageSize + 1
+  : 0)
+const communityAreaRangeEnd = computed(() => Math.min(communityAreaPage.value * communityAreaPageSize, communityAreaEntries.value.length))
+watch([selectedCommunityArea, selectedCongregation, areaSearchQuery, areaTypeFilter, areaStatusFilter, areaDateRange, areaSortOrder], () => {
+  communityAreaPage.value = 1
+})
+watch(selectedCommunityArea, () => {
+  areaTypeFilter.value = 'all'
+  areaStatusFilter.value = 'all'
+})
 const mapLocations = computed(() => community.value.congregations.filter((location) => (
   selectedCongregation.value === 'all' || location.id === selectedCongregation.value
 )))
@@ -292,6 +425,55 @@ function formatEventTime(value) {
     hour: 'numeric',
     minute: '2-digit',
   }).format(new Date(value))
+}
+
+function dateKey(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function calendarEventDateKey(value) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(value))
+  const part = (type) => parts.find((item) => item.type === type)?.value || ''
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+function calendarEventTimeKey(value) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Mexico_City',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(value))
+  const part = (type) => parts.find((item) => item.type === type)?.value || '00'
+  return `${part('hour')}:${part('minute')}`
+}
+
+function formatCalendarDate(value) {
+  return new Intl.DateTimeFormat('es-MX', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(value)
+}
+
+function formatServiceTime(value) {
+  const [hours, minutes] = value.split(':').map(Number)
+  const date = new Date()
+  date.setHours(hours, minutes, 0, 0)
+  return new Intl.DateTimeFormat('es-MX', { hour: 'numeric', minute: '2-digit' }).format(date)
+}
+
+function changeCalendarMonth(offset) {
+  calendarMonth.value = new Date(calendarMonth.value.getFullYear(), calendarMonth.value.getMonth() + offset, 1)
+  selectedCalendarDate.value = dateKey(calendarMonth.value)
 }
 
 function moduleUpdateLabel(moduleId) {
@@ -362,6 +544,7 @@ async function loadCommunity() {
     community.value = {
       congregations: [],
       events: [],
+      serviceSchedules: [],
       posts: [],
       moduleUpdates: [],
       ...response,
@@ -373,6 +556,7 @@ async function loadCommunity() {
     if (selectedCongregation.value !== 'all' && !community.value.congregations.some(({ id }) => id === selectedCongregation.value)) {
       selectedCongregation.value = 'all'
     }
+    openPostFromUrl(route.query.post)
   } catch (error) {
     errorMessage.value = error.response?.data?.error?.message || 'No pudimos cargar la agenda comunitaria.'
   } finally {
@@ -441,21 +625,138 @@ function togglePublicScrollZoom(value = !publicScrollZoom.value) {
 async function openPost(post) {
   selectedPost.value = post
   await nextTick()
-  postDialog.value?.showModal()
+  if (!postDialog.value?.open) postDialog.value?.showModal()
+  if (route.query.post !== post.id) {
+    await router.replace({ query: { ...route.query, post: post.id } })
+  }
 }
 
 function closePost() {
   postDialog.value?.close()
   selectedPost.value = null
+  if (route.query.post) {
+    const query = { ...route.query }
+    delete query.post
+    router.replace({ query })
+  }
+}
+
+async function openPostFromUrl(postId) {
+  if (typeof postId !== 'string' || selectedPost.value?.id === postId) return
+  let post = community.value.posts.find(({ id }) => id === postId)
+  if (!post && loadingLinkedPostId.value !== postId) {
+    loadingLinkedPostId.value = postId
+    try {
+      post = await getPublicCommunityPost(postId)
+    } catch (error) {
+      if (route.query.post === postId) {
+        errorMessage.value = error.response?.data?.error?.message || 'No se pudo abrir la publicación compartida.'
+      }
+    } finally {
+      if (loadingLinkedPostId.value === postId) loadingLinkedPostId.value = ''
+    }
+  }
+  if (post && route.query.post === postId && selectedPost.value?.id !== postId) await openPost(post)
 }
 
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+async function loadDonationCampaign() {
+  donationLoadError.value = ''
+  try {
+    donationCampaign.value = await getPublicDonationCampaign()
+    selectedDonationAmount.value = donationCampaign.value.amounts[0] || null
+  } catch (error) {
+    donationLoadError.value = error.response?.data?.error?.message || 'No pudimos cargar la información de donaciones.'
+  }
+}
+
+async function loadDonationPaymentStatus() {
+  const sessionId = typeof route.query.session_id === 'string' ? route.query.session_id : ''
+  if (route.query.donation !== 'success' || !sessionId) return
+
+  const maximumChecks = 6
+  for (let check = 0; check < maximumChecks; check += 1) {
+    try {
+      const { status } = await getPublicDonationPaymentStatus(sessionId)
+      donationPaymentStatus.value = status
+      if (status !== 'pending') return
+    } catch (error) {
+      donationError.value = error.response?.data?.error?.message || 'No pudimos verificar el estado de tu donación.'
+      return
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 1500))
+  }
+}
+
+function formatDonationAmount(amount) {
+  if (!donationCampaign.value) return ''
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: donationCampaign.value.currency,
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+async function startDonationCheckout() {
+  if (!selectedDonationAmount.value || donationBusy.value) return
+  donationBusy.value = true
+  donationError.value = ''
+  try {
+    const checkout = await createDonationCheckout(selectedDonationAmount.value)
+    window.location.assign(checkout.url)
+  } catch (error) {
+    donationError.value = error.response?.data?.error?.message || 'No pudimos iniciar el pago. Inténtalo nuevamente.'
+    donationBusy.value = false
+  }
+}
+
+function updateStorySliderControls() {
+  const slider = storySlider.value
+  if (!slider) return
+
+  const maxScroll = Math.max(0, slider.scrollWidth - slider.clientWidth)
+  storySliderCanGoPrevious.value = slider.scrollLeft > 2
+  storySliderCanGoNext.value = slider.scrollLeft < maxScroll - 2
+
+  const slides = [...slider.querySelectorAll('.community-story')]
+  const sliderLeft = slider.getBoundingClientRect().left
+  storySliderActiveIndex.value = slides.reduce((closestIndex, slide, index) => {
+    const closestSlide = slides[closestIndex]
+    const slideDistance = Math.abs(slide.getBoundingClientRect().left - sliderLeft)
+    const closestDistance = Math.abs(closestSlide.getBoundingClientRect().left - sliderLeft)
+    return slideDistance < closestDistance ? index : closestIndex
+  }, 0)
+}
+
+function moveStorySlider(direction) {
+  const slider = storySlider.value
+  if (!slider) return
+
+  const firstSlide = slider.querySelector('.community-story')
+  if (!firstSlide) return
+
+  const gap = Number.parseFloat(getComputedStyle(slider).columnGap) || 0
+  slider.scrollBy({
+    left: direction * (firstSlide.getBoundingClientRect().width + gap),
+    behavior: 'smooth',
+  })
+}
+
 onMounted(() => {
   loadCommunity()
+  loadDonationCampaign()
+  loadDonationPaymentStatus()
   auth.checkSession()
+})
+
+watch(() => route.query.post, openPostFromUrl)
+watch(visiblePosts, async () => {
+  await nextTick()
+  if (storySlider.value) storySlider.value.scrollLeft = 0
+  updateStorySliderControls()
 })
 </script>
 
@@ -471,6 +772,7 @@ onMounted(() => {
         <a href="#agenda">Agenda</a>
         <a href="#areas">Áreas</a>
         <a href="#historias">Historias</a>
+        <a href="#donaciones">Donaciones</a>
       </nav>
       <RouterLink class="community-admin-link" :to="managementRoute" :aria-label="managementLabel">
         {{ managementLabel }} <ArrowRightIcon aria-hidden="true" />
@@ -481,18 +783,171 @@ onMounted(() => {
     <main class="community-main">
       <section class="community-hero">
         <div class="community-hero-copy">
-          <p class="community-eyebrow"><GlobeAltIcon aria-hidden="true" /> COMUNIDAD ABIERTA</p>
-          <h1>La vida de nuestras congregaciones.</h1>
+          <p class="community-eyebrow community-hero-eyebrow"><GlobeAltIcon aria-hidden="true" /> COMUNIDAD ABIERTA</p>
+          <h1>La vida de <span>nuestras congregaciones.</span></h1>
           <p class="community-lead">Encuentros, historias y actividades para compartir. Conoce lo que sucede cerca de ti y encuentra un espacio para participar.</p>
           <a class="community-hero-cta" href="#agenda">Explorar la agenda <ArrowRightIcon aria-hidden="true" /></a>
           <div class="community-hero-counts" aria-label="Resumen de la comunidad">
-            <span><strong>{{ community.congregations.length }}</strong> congregaciones</span>
-            <span><strong>{{ community.events.length }}</strong> encuentros próximos</span>
+            <span><UsersIcon aria-hidden="true" /><strong>{{ community.congregations.length }}</strong><span>congregaciones</span></span>
+            <span><CalendarDaysIcon aria-hidden="true" /><strong>{{ community.events.length }}</strong><span>encuentros próximos</span></span>
           </div>
         </div>
         <div class="community-hero-image">
           <img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1500&q=88" alt="Personas reunidas en una actividad comunitaria" fetchpriority="high" />
+          <span class="community-hero-image-badge"><SparklesIcon aria-hidden="true" /> Historias que nos unen</span>
           <span class="community-image-caption"><UsersIcon aria-hidden="true" /> Un lugar en la mesa para cada persona</span>
+        </div>
+      </section>
+
+      <section id="historias" class="community-section community-stories-section">
+        <div class="community-section-heading community-stories-heading">
+          <div>
+            <p class="community-eyebrow">VOCES DE LA COMUNIDAD</p>
+            <h2>Historias y actividades</h2>
+            <p>Lo que compartimos también construye comunidad.</p>
+          </div>
+          <div class="community-tabs" role="group" aria-label="Tipo de publicación">
+            <button type="button" :aria-pressed="publicationType === 'all'" @click="publicationType = 'all'">Todo</button>
+            <button type="button" :aria-pressed="publicationType === 'article'" @click="publicationType = 'article'">Blog</button>
+            <button type="button" :aria-pressed="publicationType === 'activity'" @click="publicationType = 'activity'">Actividades</button>
+          </div>
+        </div>
+
+        <div v-if="!loading && !errorMessage && visiblePosts.length" class="community-stories-carousel">
+          <div class="community-stories-carousel-controls">
+            <span class="community-stories-count">{{ visiblePosts.length }} {{ visiblePosts.length === 1 ? 'historia' : 'historias' }}</span>
+            <div v-if="visiblePosts.length > 1" class="community-stories-arrows" aria-label="Controles del carrusel">
+              <button type="button" aria-label="Historia anterior" :disabled="!storySliderCanGoPrevious" @click="moveStorySlider(-1)">
+                <ChevronLeftIcon aria-hidden="true" />
+              </button>
+              <button type="button" aria-label="Siguiente historia" :disabled="!storySliderCanGoNext" @click="moveStorySlider(1)">
+                <ChevronRightIcon aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          <div
+            ref="storySlider"
+            class="community-story-grid"
+            role="region"
+            aria-label="Carrusel de historias y actividades"
+            tabindex="0"
+            @scroll.passive="updateStorySliderControls"
+          >
+          <article v-for="(post, index) in visiblePosts" :key="post.id" class="community-story" role="group" aria-roledescription="diapositiva" :aria-label="`${index + 1} de ${visiblePosts.length}`">
+            <div v-if="post.mediaType === 'video'" class="community-story-image">
+              <video :src="communityMediaSource(post.mediaUrl || post.imageUrl)" controls playsinline :aria-label="post.title" />
+              <span>{{ post.type === 'activity' ? 'Actividad' : 'Desde el blog' }}</span>
+            </div>
+            <button v-else class="community-story-image" type="button" :aria-label="`Leer ${post.title}`" @click="openPost(post)">
+              <img :src="communityMediaSource(post.mediaUrl || post.imageUrl) || post.imageUrl" :alt="post.title" loading="lazy" />
+              <span>{{ post.type === 'activity' ? 'Actividad' : 'Desde el blog' }}</span>
+            </button>
+            <div class="community-story-content">
+              <div class="community-story-meta"><span>{{ post.congregation }}</span><time :datetime="post.publishedAt">{{ formatDate(post.publishedAt, { year: 'numeric' }) }}</time></div>
+              <h3><button type="button" @click="openPost(post)">{{ post.title }}</button></h3>
+              <p>{{ post.excerpt }}</p>
+              <button class="community-read-link" type="button" @click="openPost(post)">Leer historia <ArrowRightIcon aria-hidden="true" /></button>
+            </div>
+          </article>
+          </div>
+          <div v-if="visiblePosts.length > 1" class="community-stories-progress" aria-live="polite" aria-atomic="true">
+            <span>{{ storySliderActiveIndex + 1 }} / {{ visiblePosts.length }}</span>
+            <div class="community-stories-progress-track" aria-hidden="true">
+              <span :style="{ width: `${((storySliderActiveIndex + 1) / visiblePosts.length) * 100}%` }"></span>
+            </div>
+            <small>Desliza para descubrir más</small>
+          </div>
+        </div>
+        <div v-else-if="!loading && !errorMessage" class="community-empty">
+          <BookOpenIcon aria-hidden="true" />
+          <p>No hay publicaciones para estos filtros.</p>
+        </div>
+      </section>
+
+      <section class="community-section community-activity-media-section" aria-labelledby="activity-media-title">
+        <div class="community-section-heading community-activity-media-heading">
+          <div>
+            <p class="community-eyebrow">MOMENTOS EN COMUNIDAD</p>
+            <h2 id="activity-media-title">Videos y contenido multimedia</h2>
+            <p>Videos publicados y fotos de actividades compartidos por las congregaciones.</p>
+          </div>
+          <span v-if="visibleActivityMedia.length" class="community-activity-media-count">
+            {{ visibleActivityMedia.length }} {{ visibleActivityMedia.length === 1 ? 'momento' : 'momentos' }}
+          </span>
+        </div>
+
+        <div v-if="!loading && !errorMessage && visibleActivityMedia.length" class="community-activity-media-grid">
+          <article v-for="post in visibleActivityMedia" :key="post.id" class="community-activity-media-card">
+            <div class="community-activity-media-visual">
+              <video
+                v-if="post.mediaType === 'video'"
+                :src="communityMediaSource(post.mediaUrl)"
+                controls
+                playsinline
+                preload="metadata"
+                :aria-label="post.title"
+              />
+              <button
+                v-else
+                type="button"
+                class="community-activity-media-image"
+                :aria-label="`Ver detalles de ${post.title}`"
+                @click="openPost(post)"
+              >
+                <img :src="communityMediaSource(post.mediaUrl)" :alt="post.title" loading="lazy" />
+              </button>
+              <span class="community-activity-media-type">{{ post.mediaType === 'video' ? 'Video' : 'Foto' }}</span>
+            </div>
+            <div class="community-activity-media-copy">
+              <div class="community-activity-media-meta">
+                <span>{{ post.congregation }}</span>
+                <time :datetime="post.publishedAt">{{ formatDate(post.publishedAt, { day: 'numeric', month: 'short', year: 'numeric' }) }}</time>
+              </div>
+              <h3><button type="button" @click="openPost(post)">{{ post.title }}</button></h3>
+              <p v-if="post.excerpt">{{ post.excerpt }}</p>
+            </div>
+          </article>
+        </div>
+        <div v-else-if="!loading && !errorMessage" class="community-empty community-activity-media-empty">
+          <PhotoIcon aria-hidden="true" />
+          <p>Aún no hay fotos o videos de actividades publicados.</p>
+          <RouterLink class="community-area-empty-action" :to="['admin', 'superadmin'].includes(auth.user?.role) ? { name: 'social-media' } : { name: 'login' }">
+            Compartir contenido multimedia <ArrowRightIcon aria-hidden="true" />
+          </RouterLink>
+        </div>
+      </section>
+
+      <section
+        v-if="donationCampaign?.enabled || donationLoadError || donationCheckoutStatus"
+        id="donaciones"
+        class="community-section community-donations-section"
+        aria-labelledby="donations-title"
+      >
+        <div class="community-donations-panel">
+          <div class="community-donations-copy">
+            <p class="community-eyebrow"><HeartIcon aria-hidden="true" /> UNA COMUNIDAD QUE DA</p>
+            <h2 id="donations-title">{{ donationCampaign?.title || 'Apoya a Holi Places' }}</h2>
+            <p>{{ donationCampaign?.description || donationLoadError }}</p>
+            <p class="community-donations-note"><ShieldCheckIcon aria-hidden="true" /> Pago seguro de una sola vez procesado por Stripe.</p>
+          </div>
+          <div v-if="donationCampaign?.enabled" class="community-donations-action">
+            <p>Elige el monto que deseas aportar</p>
+            <div class="community-donation-amounts" role="group" aria-label="Montos sugeridos para donar">
+              <button
+                v-for="amount in donationCampaign.amounts"
+                :key="amount"
+                type="button"
+                :aria-pressed="selectedDonationAmount === amount"
+                @click="selectedDonationAmount = amount"
+              >{{ formatDonationAmount(amount) }}</button>
+            </div>
+            <button class="community-donate-button" type="button" :disabled="donationBusy || !selectedDonationAmount" @click="startDonationCheckout">
+              <HeartIcon aria-hidden="true" /> {{ donationBusy ? 'Conectando con Stripe…' : `Donar ${formatDonationAmount(selectedDonationAmount || 0)}` }}
+              <ArrowRightIcon aria-hidden="true" />
+            </button>
+          </div>
+          <p v-if="donationCheckoutStatus" class="community-donation-status" :class="{ success: route.query.donation === 'success' }" role="status">{{ donationCheckoutStatus }}</p>
+          <p v-if="donationError || donationLoadError" class="community-donation-error" role="alert">{{ donationError || donationLoadError }}</p>
         </div>
       </section>
 
@@ -503,6 +958,7 @@ onMounted(() => {
           <a href="#agenda">Agenda</a>
           <a href="#areas">Áreas</a>
           <a href="#historias">Historias</a>
+          <a href="#donaciones">Donaciones</a>
         </div>
       </section>
 
@@ -627,9 +1083,9 @@ onMounted(() => {
       <section id="agenda" class="community-section community-agenda-section">
         <div class="community-section-heading">
           <div>
-            <p class="community-eyebrow">VEN Y COMPARTE</p>
-            <h2>Próximos encuentros</h2>
-            <p>Actividades abiertas organizadas por nuestras congregaciones.</p>
+            <p class="community-eyebrow">HORARIOS Y ENCUENTROS</p>
+            <h2>Calendario comunitario</h2>
+            <p>Consulta los servicios semanales y las actividades públicas de cada congregación.</p>
           </div>
           <label class="community-filter">
             <span>Congregación</span>
@@ -656,6 +1112,88 @@ onMounted(() => {
         </div>
         <section v-else class="community-agenda-slider" aria-label="Mapa y agenda comunitaria">
           <div class="community-agenda-slider-heading">
+            <div>
+              <p class="community-eyebrow">AGENDA MENSUAL</p>
+              <h3>{{ calendarMonthActivityCount }} {{ calendarMonthActivityCount === 1 ? 'actividad este mes' : 'actividades este mes' }}</h3>
+            </div>
+            <span>{{ visibleServiceSchedules.length }} {{ visibleServiceSchedules.length === 1 ? 'horario semanal' : 'horarios semanales' }}</span>
+          </div>
+          <section class="community-public-calendar" aria-label="Calendario mensual de servicios y reuniones">
+            <div class="community-public-calendar-grid-panel">
+              <div class="community-public-calendar-toolbar">
+                <div>
+                  <p class="community-eyebrow">SERVICIOS Y REUNIONES</p>
+                  <h4>{{ calendarMonthTitle }}</h4>
+                </div>
+                <div class="community-public-calendar-navigation" aria-label="Cambiar mes">
+                  <button type="button" aria-label="Mes anterior" @click="changeCalendarMonth(-1)"><ChevronLeftIcon /></button>
+                  <button type="button" aria-label="Mes siguiente" @click="changeCalendarMonth(1)"><ChevronRightIcon /></button>
+                </div>
+              </div>
+              <div class="community-public-calendar-weekdays" aria-hidden="true">
+                <span v-for="day in ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']" :key="day">{{ day }}</span>
+              </div>
+              <div class="community-public-calendar-days" role="grid" :aria-label="`Calendario mensual: ${calendarMonthTitle}`">
+                <button
+                  v-for="cell in calendarCells"
+                  :key="cell.key"
+                  type="button"
+                  role="gridcell"
+                  class="community-public-calendar-day"
+                  :class="{
+                    'community-public-calendar-day-outside': !cell.currentMonth,
+                    'community-public-calendar-day-selected': selectedCalendarDate === cell.key,
+                    'community-public-calendar-day-active': cell.activities.length,
+                  }"
+                  :aria-label="`${formatCalendarDate(new Date(`${cell.key}T12:00:00`))}, ${cell.activities.length} ${cell.activities.length === 1 ? 'actividad' : 'actividades'}`"
+                  :aria-pressed="selectedCalendarDate === cell.key"
+                  @click="selectedCalendarDate = cell.key"
+                >
+                  <span>{{ cell.day }}</span>
+                  <i
+                    v-if="cell.activities.length"
+                    aria-hidden="true"
+                    :class="{
+                      'community-calendar-mark-service': cell.activities.some((activity) => activity.recurring) && !cell.activities.some((activity) => !activity.recurring),
+                      'community-calendar-mark-event': cell.activities.some((activity) => !activity.recurring) && !cell.activities.some((activity) => activity.recurring),
+                      'community-calendar-mark-mixed': cell.activities.some((activity) => activity.recurring) && cell.activities.some((activity) => !activity.recurring),
+                    }"
+                  >{{ cell.activities.length }}</i>
+                </button>
+              </div>
+              <div class="community-public-calendar-legend">
+                <span><i class="community-calendar-dot community-calendar-dot-service"></i>Horario semanal</span>
+                <span><i class="community-calendar-dot community-calendar-dot-event"></i>Encuentro especial</span>
+              </div>
+            </div>
+            <aside class="community-public-calendar-detail" aria-live="polite">
+              <p class="community-eyebrow"><CalendarDaysIcon aria-hidden="true" /> DETALLE DEL DÍA</p>
+              <h4>{{ formatCalendarDate(new Date(`${selectedCalendarDate}T12:00:00`)) }}</h4>
+              <div v-if="selectedCalendarActivities.length" class="community-public-calendar-activities">
+                <article v-for="activity in selectedCalendarActivities" :key="activity.id" class="community-public-calendar-activity">
+                  <div class="community-public-calendar-activity-time">
+                    <ClockIcon aria-hidden="true" />
+                    <time>{{ activity.timeLabel }}</time>
+                  </div>
+                  <div class="community-public-calendar-activity-copy">
+                    <span :class="{ 'community-calendar-event-label': !activity.recurring }">{{ activity.activityType }}</span>
+                    <h5>{{ activity.title }}</h5>
+                    <p v-if="activity.location"><MapPinIcon aria-hidden="true" />{{ activity.location }}</p>
+                    <p v-if="activity.description">{{ activity.description }}</p>
+                    <small v-if="activity.recurring">Cada semana</small>
+                    <small v-else-if="activity.synthetic">Actividad de demostración</small>
+                  </div>
+                </article>
+              </div>
+              <div v-else class="community-public-calendar-empty">
+                <CalendarDaysIcon aria-hidden="true" />
+                <p>Sin actividades para este día.</p>
+                <span>Elige otra fecha para consultar los horarios publicados.</span>
+              </div>
+              <p v-if="selectedCongregation === 'all'" class="community-public-calendar-note">Los horarios semanales se repiten cada semana y las actividades especiales se muestran en su fecha.</p>
+            </aside>
+          </section>
+          <div class="community-agenda-slider-heading community-agenda-upcoming-heading">
             <div>
               <p class="community-eyebrow">{{ community.syntheticFixturesEnabled ? 'PIZARRA · DATOS DE PRUEBA' : 'AGENDA COMUNITARIA' }}</p>
               <h3>Próximos encuentros por sede</h3>
@@ -746,73 +1284,96 @@ onMounted(() => {
         <div class="community-area-dashboard-toolbar">
           <div class="community-area-summary-strip" aria-label="Resumen del tablero">
             <span><strong>{{ community.congregations.length }}</strong> sedes</span>
-            <span><strong>{{ visibleCommunityAreaSections.reduce((total, section) => total + section.count, 0) }}</strong> registros</span>
-            <span><strong>{{ communityAreas.filter(({ id }) => id !== 'all').reduce((total, area) => total + area.count, 0) }}</strong> módulos activos</span>
+            <span><strong>{{ communityAreaEntries.length }}</strong> resultados</span>
+            <span><strong>{{ communityAreaModulesCount }}</strong> áreas con contenido</span>
           </div>
           <div class="community-area-filters">
             <label class="community-area-search" aria-label="Buscar registros">
               <span>Buscar</span>
               <input v-model="areaSearchQuery" type="search" placeholder="Título, módulo, congregación..." />
             </label>
+            <label class="community-area-congregation" aria-label="Filtrar por congregación">
+              <span>Congregación</span>
+              <select v-model="selectedCongregation">
+                <option value="all">Todas</option>
+                <option v-for="congregation in community.congregations" :key="congregation.id" :value="congregation.id">
+                  {{ congregation.name }}
+                </option>
+              </select>
+            </label>
+            <label class="community-area-type" aria-label="Filtrar por tipo de contenido">
+              <span>Tipo</span>
+              <select v-model="areaTypeFilter">
+                <option value="all">Todos</option>
+                <option v-for="type in communityAreaTypes" :key="type" :value="type">{{ type }}</option>
+              </select>
+            </label>
+            <label class="community-area-status-filter" aria-label="Filtrar por estado">
+              <span>Estado</span>
+              <select v-model="areaStatusFilter">
+                <option value="all">Todos</option>
+                <option v-for="status in communityAreaStatuses" :key="status" :value="status">{{ status }}</option>
+              </select>
+            </label>
+            <label class="community-area-period" aria-label="Filtrar por periodo">
+              <span>Periodo</span>
+              <select v-model="areaDateRange">
+                <option value="all">Cualquier fecha</option>
+                <option value="7">Últimos 7 días</option>
+                <option value="30">Últimos 30 días</option>
+                <option value="90">Últimos 90 días</option>
+                <option value="365">Último año</option>
+              </select>
+            </label>
             <label class="community-area-order" aria-label="Orden de resultados">
               <span>Orden</span>
-              <select value="recent">
+              <select v-model="areaSortOrder">
                 <option value="recent">Más recientes</option>
-                <option value="congregation">Por congregación</option>
+                <option value="oldest">Más antiguos</option>
+                <option value="title">Título A–Z</option>
+                <option value="congregation">Congregación A–Z</option>
               </select>
             </label>
           </div>
         </div>
 
         <div id="community-area-panel" class="community-area-panel" role="tabpanel" tabindex="0" :aria-labelledby="`community-area-tab-${selectedCommunityArea}`">
-          <div v-if="visibleCommunityAreaSections.length" class="community-area-groups">
-            <section v-for="section in visibleCommunityAreaSections" :key="section.id" class="community-area-group" :class="`community-area-group-${section.id}`">
-              <header class="community-area-group-heading">
-                <span class="community-area-heading-icon"><component :is="areaIcon(section.id)" aria-hidden="true" /></span>
-                <div><p class="community-eyebrow">{{ communityAreas.find(({ id }) => id === section.id)?.description }}</p><h3>{{ section.label }}</h3></div>
-                <span class="community-area-count">{{ section.count }} <small>{{ section.count === 1 ? 'registro' : 'registros' }}</small></span>
-              </header>
-              <div v-if="section.count" class="community-area-org-groups">
-                <div v-for="organizationGroup in section.organizationGroups" :key="`${section.id}-${organizationGroup.name}`" class="community-area-org-group">
-                  <div class="community-area-org-group-header">
-                    <span class="community-area-org-group-badge"><BuildingLibraryIcon aria-hidden="true" /></span>
-                    <div class="community-area-org-group-copy"><strong>{{ organizationGroup.name }}</strong><small>{{ organizationGroup.items.length }} {{ organizationGroup.items.length === 1 ? 'registro en esta área' : 'registros en esta área' }}</small></div>
+          <div v-if="paginatedCommunityAreaEntries.length" class="community-area-results">
+            <div class="community-area-results-grid">
+              <details v-for="(entry, index) in paginatedCommunityAreaEntries" :key="`${entry.areaId}-${entry.id}-${index}`" class="community-area-entry">
+                <summary>
+                  <span class="community-area-entry-icon"><component :is="areaIcon(entry.areaId)" aria-hidden="true" /></span>
+                  <div class="community-area-entry-content">
+                    <div class="community-update-meta">
+                      <span>{{ entry.areaLabel }} · {{ entry.recordType }}</span>
+                      <span v-if="entry.synthetic" class="community-synthetic-badge">SINTÉTICO · PRIVADO</span>
+                      <span v-if="entry.status" class="community-area-status">{{ entry.status }}</span>
+                      <time v-if="entry.date" :datetime="entry.date">{{ formatDate(entry.date, { year: 'numeric' }) }}</time>
+                    </div>
+                    <h4>{{ entry.title }}</h4>
+                    <p v-if="entry.description" class="community-area-entry-preview">{{ entry.description }}</p>
+                    <span class="community-update-congregation"><MapPinIcon aria-hidden="true" />{{ entry.congregation || entry.name }}</span>
                   </div>
-                  <div class="community-area-entries community-area-slider" aria-label="Slider de registros del módulo">
-                    <details v-for="entry in organizationGroup.items" :key="entry.id" class="community-area-entry community-area-slide-card">
-                      <summary>
-                        <span class="community-area-entry-icon"><component :is="areaIcon(section.id)" aria-hidden="true" /></span>
-                        <div class="community-area-entry-content">
-                          <div class="community-update-meta">
-                            <span>{{ areaRecordType(section.id, entry) }}</span>
-                            <span v-if="entry.synthetic" class="community-synthetic-badge">SINTÉTICO · PRIVADO</span>
-                            <span v-if="entry.status" class="community-area-status">{{ entry.status }}</span>
-                            <time v-if="entry.date" :datetime="entry.date">{{ formatDate(entry.date, { year: 'numeric' }) }}</time>
-                          </div>
-                          <h4>{{ entry.title }}</h4>
-                          <p v-if="entry.description" class="community-area-entry-preview">{{ entry.description }}</p>
-                          <span class="community-update-congregation"><MapPinIcon aria-hidden="true" />{{ entry.congregation || entry.name }}</span>
-                        </div>
-                      </summary>
-                      <div class="community-area-entry-detail">
-                        <p v-if="entry.description">{{ entry.description }}</p>
-                        <p v-if="entry.detail" class="community-update-detail">{{ entry.detail }}</p>
-                        <p v-if="entry.startsAt && entry.endsAt" class="community-area-entry-time">Termina {{ formatEventTime(entry.endsAt) }}</p>
-                      </div>
-                    </details>
-                  </div>
+                </summary>
+                <div class="community-area-entry-detail">
+                  <p v-if="entry.description">{{ entry.description }}</p>
+                  <p v-if="entry.detail" class="community-update-detail">{{ entry.detail }}</p>
+                  <p v-if="entry.startsAt && entry.endsAt" class="community-area-entry-time">Termina {{ formatEventTime(entry.endsAt) }}</p>
                 </div>
+              </details>
+            </div>
+            <nav v-if="communityAreaPages > 1" class="community-area-pagination" aria-label="Paginación de resultados">
+              <span>Mostrando {{ communityAreaRangeStart }}–{{ communityAreaRangeEnd }} de {{ communityAreaEntries.length }}</span>
+              <div>
+                <button type="button" :disabled="communityAreaPage === 1" @click="communityAreaPage -= 1">Anterior</button>
+                <span>Página {{ communityAreaPage }} de {{ communityAreaPages }}</span>
+                <button type="button" :disabled="communityAreaPage === communityAreaPages" @click="communityAreaPage += 1">Siguiente</button>
               </div>
-              <div v-else class="community-empty community-area-no-records">
-                <UsersIcon aria-hidden="true" />
-                <p>No hay registros públicos en esta área.</p>
-                <RouterLink class="community-area-empty-action" :to="managementRoute">{{ managementLabel }} <ArrowRightIcon aria-hidden="true" /></RouterLink>
-              </div>
-            </section>
+            </nav>
           </div>
           <div v-else class="community-empty community-updates-empty">
             <UsersIcon aria-hidden="true" />
-            <p>{{ selectedCommunityArea === 'all' ? 'Todavía no hay información pública para estas áreas.' : `No hay contenido público en el área ${communityAreas.find(({ id }) => id === selectedCommunityArea)?.label || ''}.` }}</p>
+            <p>{{ areaSearchQuery || areaTypeFilter !== 'all' || areaStatusFilter !== 'all' || areaDateRange !== 'all' || selectedCongregation !== 'all' ? 'No encontramos registros con esos filtros. Prueba ajustar la búsqueda.' : selectedCommunityArea === 'all' ? 'Todavía no hay información pública para estas áreas.' : `No hay contenido público en el área ${communityAreas.find(({ id }) => id === selectedCommunityArea)?.label || ''}.` }}</p>
             <RouterLink class="community-area-empty-action" :to="managementRoute">{{ managementLabel }} <ArrowRightIcon aria-hidden="true" /></RouterLink>
           </div>
         </div>
@@ -821,40 +1382,6 @@ onMounted(() => {
       <ScrollAdSlot :ads="liveAds" placement="community" :slot-index="1" :slot-count="3" :slot-seed="1" />
 
       <ScrollAdSlot :ads="liveAds" placement="content" :slot-index="1" :slot-count="3" :slot-seed="3" />
-
-      <section id="historias" class="community-section community-stories-section">
-        <div class="community-section-heading community-stories-heading">
-          <div>
-            <p class="community-eyebrow">VOCES DE LA COMUNIDAD</p>
-            <h2>Historias y actividades</h2>
-            <p>Lo que compartimos también construye comunidad.</p>
-          </div>
-          <div class="community-tabs" role="group" aria-label="Tipo de publicación">
-            <button type="button" :aria-pressed="publicationType === 'all'" @click="publicationType = 'all'">Todo</button>
-            <button type="button" :aria-pressed="publicationType === 'article'" @click="publicationType = 'article'">Blog</button>
-            <button type="button" :aria-pressed="publicationType === 'activity'" @click="publicationType = 'activity'">Actividades</button>
-          </div>
-        </div>
-
-        <div v-if="!loading && !errorMessage && visiblePosts.length" class="community-story-grid">
-          <article v-for="(post, index) in visiblePosts" :key="post.id" class="community-story" :class="{ 'community-story-featured': index === 0 }">
-            <button class="community-story-image" type="button" :aria-label="`Leer ${post.title}`" @click="openPost(post)">
-              <img :src="post.imageUrl" :alt="post.title" loading="lazy" />
-              <span>{{ post.type === 'activity' ? 'Actividad' : 'Desde el blog' }}</span>
-            </button>
-            <div class="community-story-content">
-              <div class="community-story-meta"><span>{{ post.congregation }}</span><time :datetime="post.publishedAt">{{ formatDate(post.publishedAt, { year: 'numeric' }) }}</time></div>
-              <h3><button type="button" @click="openPost(post)">{{ post.title }}</button></h3>
-              <p>{{ post.excerpt }}</p>
-              <button class="community-read-link" type="button" @click="openPost(post)">Leer historia <ArrowRightIcon aria-hidden="true" /></button>
-            </div>
-          </article>
-        </div>
-        <div v-else-if="!loading && !errorMessage" class="community-empty">
-          <BookOpenIcon aria-hidden="true" />
-          <p>No hay publicaciones para estos filtros.</p>
-        </div>
-      </section>
 
       <ScrollAdSlot :ads="liveAds" placement="community" :slot-index="2" :slot-count="3" :slot-seed="2" />
 
@@ -870,9 +1397,10 @@ onMounted(() => {
       <a href="#top" @click.prevent="scrollToTop">Volver arriba <ArrowRightIcon aria-hidden="true" /></a>
     </footer>
 
-    <dialog v-if="selectedPost" ref="postDialog" class="community-dialog" @close="selectedPost = null" @click.self="closePost">
+    <dialog v-if="selectedPost" ref="postDialog" class="community-dialog" @close="closePost" @click.self="closePost">
       <button class="community-dialog-close" type="button" aria-label="Cerrar publicación" @click="closePost"><XMarkIcon aria-hidden="true" /></button>
-      <img :src="selectedPost.imageUrl" :alt="selectedPost.title" />
+      <video v-if="selectedPost.mediaType === 'video'" :src="communityMediaSource(selectedPost.mediaUrl || selectedPost.imageUrl)" controls playsinline :aria-label="selectedPost.title" />
+      <img v-else :src="communityMediaSource(selectedPost.mediaUrl || selectedPost.imageUrl) || selectedPost.imageUrl" :alt="selectedPost.title" />
       <div class="community-dialog-content">
         <p class="community-eyebrow">{{ selectedPost.type === 'activity' ? 'ACTIVIDAD' : 'DESDE EL BLOG' }} · {{ selectedPost.congregation }}</p>
         <h2>{{ selectedPost.title }}</h2>
@@ -891,12 +1419,29 @@ onMounted(() => {
 }
 
 .community-congregation-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 18px;
+  display: flex;
+  min-width: 0;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 3px 2px 14px;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(80, 119, 98, 0.45) transparent;
+}
+
+.community-congregation-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.community-congregation-grid::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(80, 119, 98, 0.45);
 }
 
 .community-congregation-card {
+  flex: 0 0 clamp(230px, 24%, 290px);
   background: #fffefa;
   border: 1px solid #e1e5db;
   border-radius: 4px;
@@ -905,6 +1450,7 @@ onMounted(() => {
   cursor: pointer;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   color: inherit;
+  scroll-snap-align: start;
 }
 
 .community-congregation-card:hover,
@@ -1022,8 +1568,18 @@ onMounted(() => {
 }
 
 @media (max-width: 900px) {
+  .community-congregation-card {
+    flex-basis: clamp(230px, 40%, 300px);
+  }
+
   .community-selected-detail-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .community-congregation-card {
+    flex-basis: min(82vw, 310px);
   }
 }
 </style>

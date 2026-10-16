@@ -5,7 +5,17 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import SubscriptionModuleView from '../components/SubscriptionModuleView.vue'
 import { filterLocations, getBrowserCoordinates } from '../modules/locationFilters.js'
-import { assignEventToLocation, createModuleRecord, deleteModuleRecord, getModuleData, reserveLocation, updateModuleRecord } from '../services/moduleService'
+import {
+  assignEventToLocation,
+  createModuleRecord,
+  createServiceSchedule,
+  deleteModuleRecord,
+  deleteServiceSchedule,
+  getModuleData,
+  reserveLocation,
+  updateModuleRecord,
+  updateServiceSchedule,
+} from '../services/moduleService'
 import { useAuthStore } from '../stores/auth'
 
 const props = defineProps({
@@ -19,6 +29,7 @@ const auth = useAuthStore()
 const records = ref([])
 const locationChoices = ref([])
 const events = ref([])
+const serviceSchedules = ref([])
 const reservations = ref([])
 const selectedLocationId = ref(null)
 const searchCenter = ref(null)
@@ -44,6 +55,28 @@ const settingsStatusFilter = ref('all')
 const action = ref('')
 const editorOpen = ref(false)
 const editorId = ref(null)
+const scheduleEditorOpen = ref(false)
+const scheduleEditorId = ref(null)
+const scheduleForm = reactive({
+  title: '',
+  serviceType: 'Misa',
+  dayOfWeek: 0,
+  startsAt: '09:00',
+  endsAt: '10:00',
+  locationId: '',
+  description: '',
+  status: 'active',
+  isPublic: false,
+})
+const weekDays = [
+  { value: 0, label: 'Domingo' },
+  { value: 1, label: 'Lunes' },
+  { value: 2, label: 'Martes' },
+  { value: 3, label: 'Miércoles' },
+  { value: 4, label: 'Jueves' },
+  { value: 5, label: 'Viernes' },
+  { value: 6, label: 'Sábado' },
+]
 const locatingEditor = ref(false)
 const editorLocationError = ref('')
 const recordForm = reactive({})
@@ -204,6 +237,7 @@ async function loadModule() {
   try {
     const data = await getModuleData(props.module.id)
     records.value = data.records
+    serviceSchedules.value = data.schedules || []
     events.value = data.events || []
     reservations.value = data.reservations || []
     if (['events', 'reservations'].includes(props.module.id)) {
@@ -408,6 +442,56 @@ async function saveRecord() {
     error.value = errorMessage(problem)
   } finally {
     saving.value = false
+  }
+}
+
+function openScheduleEditor(schedule = null) {
+  scheduleEditorId.value = schedule?.id || null
+  scheduleForm.title = schedule?.title || ''
+  scheduleForm.serviceType = schedule?.serviceType || 'Misa'
+  scheduleForm.dayOfWeek = schedule?.dayOfWeek ?? 0
+  scheduleForm.startsAt = schedule?.startsAt ? String(schedule.startsAt).slice(0, 5) : '09:00'
+  scheduleForm.endsAt = schedule?.endsAt ? String(schedule.endsAt).slice(0, 5) : '10:00'
+  scheduleForm.locationId = schedule?.locationId || locationChoices.value[0]?.id || ''
+  scheduleForm.description = schedule?.description || ''
+  scheduleForm.status = schedule?.status || 'active'
+  scheduleForm.isPublic = Boolean(schedule?.isPublic)
+  scheduleEditorOpen.value = true
+  error.value = ''
+}
+
+function closeScheduleEditor() {
+  scheduleEditorOpen.value = false
+  scheduleEditorId.value = null
+}
+
+async function saveServiceSchedule() {
+  if (saving.value) return
+  saving.value = true
+  error.value = ''
+  try {
+    const payload = { ...scheduleForm, dayOfWeek: Number(scheduleForm.dayOfWeek) }
+    if (scheduleEditorId.value) await updateServiceSchedule(scheduleEditorId.value, payload)
+    else await createServiceSchedule(payload)
+    notice.value = scheduleEditorId.value ? 'Horario semanal actualizado.' : 'Horario semanal agregado.'
+    closeScheduleEditor()
+    await loadModule()
+  } catch (problem) {
+    error.value = errorMessage(problem)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function removeServiceSchedule(schedule) {
+  if (!canDelete.value || !globalThis.confirm?.(`¿Eliminar el horario “${schedule.title}”?`)) return
+  error.value = ''
+  try {
+    await deleteServiceSchedule(schedule.id)
+    notice.value = 'Horario semanal eliminado.'
+    await loadModule()
+  } catch (problem) {
+    error.value = errorMessage(problem)
   }
 }
 
@@ -928,6 +1012,73 @@ onBeforeUnmount(() => {
 
     <div v-else-if="loading && !records.length" class="module-loading">Cargando datos…</div>
     <section v-else-if="records.length || canWrite" class="module-records" :class="{ 'attendance-module-records': isAttendanceModule, 'resources-module-records': isResourcesModule, 'reports-module-records': isReportsModule, 'settings-module-records': isSettingsModule }" :aria-label="`Datos de ${module.label}`">
+      <section v-if="module.id === 'events'" class="service-schedule-admin" aria-labelledby="service-schedule-heading">
+        <div class="records-toolbar">
+          <div>
+            <p class="eyebrow">HORARIOS RECURRENTES</p>
+            <h3 id="service-schedule-heading">Servicios y reuniones semanales</h3>
+            <p class="service-schedule-intro">Administra los horarios habituales de misa, oración y reuniones por sede.</p>
+          </div>
+          <button v-if="canWrite" class="map-tool-button" type="button" @click="scheduleEditorOpen ? closeScheduleEditor() : openScheduleEditor()">
+            <PlusIcon />{{ scheduleEditorOpen ? 'Cerrar formulario' : 'Agregar horario' }}
+          </button>
+        </div>
+        <form v-if="scheduleEditorOpen" class="service-schedule-form" @submit.prevent="saveServiceSchedule">
+          <h4>{{ scheduleEditorId ? 'Editar horario semanal' : 'Nuevo horario semanal' }}</h4>
+          <div class="service-schedule-fields">
+            <label>Actividad<input v-model="scheduleForm.title" required maxlength="255" placeholder="Ej. Misa dominical" /></label>
+            <label>Tipo
+              <select v-model="scheduleForm.serviceType" required>
+                <option>Misa</option><option>Oración</option><option>Culto</option><option>Reunión</option><option>Otro</option>
+              </select>
+            </label>
+            <label>Día
+              <select v-model="scheduleForm.dayOfWeek" required>
+                <option v-for="day in weekDays" :key="day.value" :value="day.value">{{ day.label }}</option>
+              </select>
+            </label>
+            <label>Sede
+              <select v-model="scheduleForm.locationId" required>
+                <option value="" disabled>Selecciona una sede</option>
+                <option v-for="location in locationChoices" :key="location.id" :value="location.id">{{ location.title }}</option>
+              </select>
+            </label>
+            <label>Hora de inicio<input v-model="scheduleForm.startsAt" type="time" required /></label>
+            <label>Hora de fin<input v-model="scheduleForm.endsAt" type="time" required /></label>
+            <label>Estado
+              <select v-model="scheduleForm.status">
+                <option value="active">Activo</option><option value="inactive">Inactivo</option>
+              </select>
+            </label>
+            <label class="service-schedule-description">Descripción<textarea v-model="scheduleForm.description" rows="2" maxlength="1000" placeholder="Detalles para las personas que asistirán" /></label>
+          </div>
+          <label class="service-schedule-public"><input v-model="scheduleForm.isPublic" type="checkbox" /><span>Mostrar este horario en el calendario público</span></label>
+          <div class="record-editor-actions">
+            <button class="map-tool-button" type="button" @click="closeScheduleEditor">Cancelar</button>
+            <button class="primary-action" type="submit" :disabled="saving || !locationChoices.length">{{ saving ? 'Guardando…' : 'Guardar horario' }}</button>
+          </div>
+          <p v-if="!locationChoices.length" class="service-schedule-empty">Primero registra una sede en el módulo Sedes.</p>
+        </form>
+        <div v-if="serviceSchedules.length" class="service-schedule-list">
+          <article v-for="schedule in serviceSchedules" :key="schedule.id" class="service-schedule-row">
+            <span class="service-schedule-day">{{ weekDays.find((day) => day.value === Number(schedule.dayOfWeek))?.label }}</span>
+            <div class="service-schedule-copy">
+              <h4>{{ schedule.title }}</h4>
+              <p>{{ schedule.serviceType }} · {{ String(schedule.startsAt).slice(0, 5) }}–{{ String(schedule.endsAt).slice(0, 5) }} · {{ schedule.location }}</p>
+              <small>{{ schedule.description || 'Sin detalles adicionales.' }}</small>
+            </div>
+            <div class="service-schedule-status">
+              <span :class="{ 'service-schedule-inactive': schedule.status !== 'active' }">{{ schedule.status === 'active' ? 'Activo' : 'Inactivo' }}</span>
+              <span>{{ schedule.isPublic ? 'Público' : 'Privado' }}</span>
+            </div>
+            <div v-if="canWrite" class="record-row-actions">
+              <button type="button" class="record-action" :aria-label="`Editar ${schedule.title}`" @click="openScheduleEditor(schedule)"><PencilSquareIcon />Editar</button>
+              <button v-if="canDelete" type="button" class="record-action record-action-danger" :aria-label="`Eliminar ${schedule.title}`" @click="removeServiceSchedule(schedule)"><TrashIcon />Eliminar</button>
+            </div>
+          </article>
+        </div>
+        <p v-else class="service-schedule-empty">Aún no hay horarios recurrentes. Agrega los servicios habituales de cada sede.</p>
+      </section>
       <template v-if="isAttendanceModule">
         <div class="attendance-summary" aria-label="Resumen de asistencia">
           <div><span>Sesiones registradas</span><strong>{{ attendanceSummary.sessions }}</strong></div>
